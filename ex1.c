@@ -33,7 +33,7 @@ int main(){
 	pthread_create(&thread_2, NULL, thread_2Func, NULL);
 	pthread_join(thread_2, NULL);
 
-	printf("%d\n", i);
+	printf("%d\n\n", i);
 
 	return 0;
 }
