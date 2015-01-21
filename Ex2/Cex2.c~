@@ -20,13 +20,11 @@ void* thread_1Func() {
 
 void* thread_2Func() {
 	int k;
-	
-	for (k = 0; k < 999999; k++) {
 	pthread_mutex_lock(&mtx);
+	for (k = 0; k < 999999; k++) {
 		i--;
-	pthread_mutex_unlock(&mtx);
 	}
-	
+	pthread_mutex_unlock(&mtx);
 	return NULL;
 }
 

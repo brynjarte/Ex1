@@ -7,22 +7,20 @@ mtx = Lock()
 def thread_1Func():
 	global i
 	j = 0
-	
+	mtx.acquire()
 	while j < 1000000:
-		mtx.acquire()
 		i = i+1
 		j = j+1
-		mtx.release()
+	mtx.release()
 
 def thread_2Func():
 	global i
 	j = 0
-	
+	mtx.acquire()
 	while j < 999999:
-		mtx.acquire()
 		i = i-1
 		j = j+1
-		mtx.release()
+	mtx.release()
 		
 def main():
 

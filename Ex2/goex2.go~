@@ -37,7 +37,7 @@ func main() {
 	
 	
 	someChannel := make(chan int,1)
-	doneChannel := make(chan int)
+	doneChannel := make(chan int,1)
 	
 	
 	someChannel <-1	
