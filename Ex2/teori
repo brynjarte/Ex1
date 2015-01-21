@@ -1,0 +1,12 @@
+Atomic operation:
+ Ein operasjon der ein prosessor kan lesa og skriva I same operasjon. Det hindrar at andre enheter kan skriva og lesa, mens den pågår.
+
+Semaphore:
+Brukt for å kontrollera tilgang til ein felles ressurs. 
+
+Mutex: 
+Samme som Semaphore, men den som tar tilgangen til ein ressurs må og frigi den.
+
+Critical section:
+
+Delen av koden som aksessere ein delt ressurs, som ikkje blir aksessert av fleire enn ein tråd.
