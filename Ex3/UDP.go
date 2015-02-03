@@ -13,7 +13,7 @@ type UDPmessage {
 }
 
 //For å laga ein struct: var msg UDPmessage
-// Berre la inn noke random i structen.
+//Berre la inn noke random i structen.
 
 
 func receive_UDP() (string){
