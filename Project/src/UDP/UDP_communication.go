@@ -17,6 +17,25 @@ type UDPMessage struct{
 }
 
 
+func recieveUdpMessage_B(rec_channel chan UDPMessage, terminate chan int){
+	
+	buffer := make([]byte,1024) 
+	raddr,_ := net.ResolveUDPAddr("udp", ":25555")
+	recievesock,_ := net.ListenUDP("udp", raddr)
+	var rec_msg UDPMessage
+	for {
+		select{
+			case <- terminate:
+				return
+			default:
+				mlen , _,_ := recievesock.ReadFromUDP(buffer)
+				json.Unmarshal(buffer[:mlen], &rec_msg)
+				rec_channel <- rec_msg 
+				//fmt.Println(rec_msg.Message, rec_msg.MessageNumber)
+		}
+	}
+}
+
 func recieveUdpMessage(rec_channel chan UDPMessage){
 	
 	buffer := make([]byte,1024) 
@@ -24,16 +43,14 @@ func recieveUdpMessage(rec_channel chan UDPMessage){
 	recievesock,_ := net.ListenUDP("udp", raddr)
 	var rec_msg UDPMessage
 	for {
-
 		mlen , _,_ := recievesock.ReadFromUDP(buffer)
-
 		json.Unmarshal(buffer[:mlen], &rec_msg)
 		rec_channel <- rec_msg 
 		//fmt.Println(rec_msg.Message, rec_msg.MessageNumber)
-	
 	}
-	
 }
+
+
 
 func sendUdpMessage(msg UDPMessage){
 	
