@@ -39,7 +39,7 @@ func sendUdpMessage(msg UDPMessage){
 	
 	baddr,err := net.ResolveUDPAddr("udp", "129.241.187.255:25555")
 	sendSock, err := net.DialUDP("udp", nil ,baddr) // connection
-	time.Sleep(200*time.Millisecond)
+	//time.Sleep(200*time.Millisecond)
 	buf,_ := json.Marshal(msg)
 	_,err = sendSock.Write(buf)
 	if err != nil{
