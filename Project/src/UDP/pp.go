@@ -28,13 +28,13 @@ func ProcessPair(p Process, rec_channel chan UDPMessage){
 
 		if(p.Backup){
 			if(p.SequenceNumber == 0){
-				go recieveMessage(rec_channel)
+				go recieveMessage(rec_channel)//DERSOM KANALEN ER UNBUFFERED SÅ TRENGE ME IKKJE SJEKKD DA.
 			}
 			for{
 				go timeOut(timeChannel)
 						
 				select{
-					case recievedMsg := <- rec_channel:
+					case recievedMsg := <- rec_channel: 
 						p.SequenceNumber = recievedMsg.MessageNumber	
 				
 					case <-timeChannel:
