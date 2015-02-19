@@ -20,7 +20,7 @@ func ProcessPair(p Process, rec_channel chan UDPMessage){
 		if(p.Master){
 			for i:=p.SequenceNumber; i<p.SequenceNumber+6; i++ {
 				msg := UDPMessage{strconv.Itoa(i),i}
-				sendMessage(msg)
+				sendUdpMessage(msg)
 				fmt.Println(i)
 			}
 		return
@@ -28,7 +28,7 @@ func ProcessPair(p Process, rec_channel chan UDPMessage){
 
 		if(p.Backup){
 			if(p.SequenceNumber == 0){
-				go recieveMessage(rec_channel)//DERSOM KANALEN ER UNBUFFERED SÅ TRENGE ME IKKJE SJEKKD DA.
+				go recieveUdpMessage(rec_channel)//DERSOM KANALEN ER UNBUFFERED SÅ TRENGE ME IKKJE SJEKKD DA.
 			}
 			for{
 				go timeOut(timeChannel)
@@ -57,21 +57,34 @@ func ProcessPair(p Process, rec_channel chan UDPMessage){
 }	
 
 
-
-
-
 func timeOut(timeChannel chan bool){
 	time.Sleep(3*time.Second)
 	timeChannel <- true
 }
 
+func primary(){
 	
+	msg := UDPMessage{"I'm alive",1}
+	for{
+		sendUdpMessage(msg)
+		time.Sleep(1*time.Second)
+	}
+}
 
-
-
-
-
-
+func Backup(rec_channel chan UDPMessage){
+	timeChannel := make(chan bool,1)
+	go recieveUdpMessage(rec_channel)
+	for{
+		go timeOut(timeChannel)
+		select{
+			case <-rec_channel: 
+				fmt.Println("KONTAKT MED MASTER")	
+			case <-timeChannel:
+				go primary()
+				fmt.Println("Startar ny master")
+			}
+	}
+}
 
 
 
