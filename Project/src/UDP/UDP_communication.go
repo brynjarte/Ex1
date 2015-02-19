@@ -17,7 +17,7 @@ type UDPMessage struct{
 }
 
 
-func recieveMessage(rec_channel chan UDPMessage){
+func recieveUdpMessage(rec_channel chan UDPMessage){
 	
 	buffer := make([]byte,1024) 
 	raddr,_ := net.ResolveUDPAddr("udp", ":25555")
@@ -35,7 +35,7 @@ func recieveMessage(rec_channel chan UDPMessage){
 	
 }
 
-func sendMessage(msg UDPMessage){
+func sendUdpMessage(msg UDPMessage){
 	
 	baddr,err := net.ResolveUDPAddr("udp", "129.241.187.255:25555")
 	sendSock, err := net.DialUDP("udp", nil ,baddr) // connection
