@@ -42,7 +42,7 @@ type ButtonMessage struct {
 
 //var ReadButtonsChannel = make(chan ButtonMessage, 1)
 
-func Elev_init() int{
+func elev_init() int{
 	
 
 	if (io_init() == 0) {
@@ -142,7 +142,7 @@ func elev_set_floor_indicator(floor int) int {
 }
 
 
-func Elev_set_button_lamp(button int, floor int, value int) int{
+func elev_set_button_lamp(button int, floor int, value int) int{
 
 	if(floor < 0){
 		return ERROR
@@ -240,3 +240,18 @@ func ReadSensors(sensorChannel chan int){
 	}
 }
 
+func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage){
+	err := elev_init()
+	if(err == 0){
+		return
+	}
+		
+	for{
+		select{
+			case currentFloor := <- sensorChannel:
+				elev_set_floor_indicator(currentFloor)
+			case buttonPushed := readButtonsChannel:
+				//LEGG TIL I KØ
+				elev_set_button_lamp(buttonPushed.Button, buttonPushed.Floor,1)
+				
+				
