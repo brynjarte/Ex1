@@ -18,7 +18,7 @@ type UDPMessage struct{
 
 
 
-func recieveUdpMessage(rec_channel chan UDPMessage){
+func RecieveUdpMessage(rec_channel chan UDPMessage){
 	
 	buffer := make([]byte,1024) 
 	raddr,_ := net.ResolveUDPAddr("udp", ":25555")
