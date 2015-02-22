@@ -3,7 +3,10 @@ package driver
 #cgo LDFLAGS: -lcomedi -lm
 #include "channels.h"
 */
-import "C"
+import (
+	"C"
+	"UDP"
+	)
 
 const (
 	DIRN_DOWN = -1
@@ -240,18 +243,27 @@ func ReadSensors(sensorChannel chan int){
 	}
 }
 
-func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage){
+func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage, rec_channel chan UDPMessage){
 	err := elev_init()
 	if(err == 0){
 		return
 	}
-		
+	go UDP.recieveUdpMessage(rec_channel)	
 	for{
 		select{
 			case currentFloor := <- sensorChannel:
 				elev_set_floor_indicator(currentFloor)
 			case buttonPushed := readButtonsChannel:
-				//LEGG TIL I KØ
+				/*select{
+					case sjekk ka heis så er best
+				//LEGG TIL I KØ*/
 				elev_set_button_lamp(buttonPushed.Button, buttonPushed.Floor,1)
+			case msg := <- rec_channel:
+				/*select{
+					case sjekk ka heis så er best
+				//LEGG TIL I KØ*/
+		}
+	}
+}
 				
 				
