@@ -35,14 +35,12 @@ var button_channel_matrix = [N_FLOORS][N_BUTTONS] int {
 	{C.BUTTON_UP4, C.BUTTON_DOWN4, C.BUTTON_COMMAND4},
 }
 
-
 type ButtonMessage struct {
 	Floor int
 	Button int
 }	
 
-var ReadButtonsChannel = make(chan ButtonMessage, 1)
-
+//var ReadButtonsChannel = make(chan ButtonMessage, 1)
 
 func Elev_init() int{
 	
@@ -109,7 +107,7 @@ func elev_set_stop_lamp(value int) {
 	}
 }
 
-func elev_get_floor_sensor_signal() int {
+/*func elev_get_floor_sensor_signal() int {
 	if (io_read_bit(C.SENSOR_FLOOR1) != 0) {
 		return 0
 	} else if (io_read_bit(C.SENSOR_FLOOR2) != 0) {
@@ -121,7 +119,7 @@ func elev_get_floor_sensor_signal() int {
 	} else {
 		return -1
 	}
-}
+}*/
 
 func elev_set_floor_indicator(floor int) int {
 	if (floor < 0 || floor >= N_FLOORS) {
@@ -197,12 +195,12 @@ func elev_get_button_signal(button int, floor int) int{
 	}
 }
 
-func ReadButtons() { 
+func ReadButtons(ReadButtonsChannel chan ButtonMessage) { 
 	var buttonPressed ButtonMessage
 	buttonPressed.Floor = -1
 	for{    	
 		for  i := 0; i < 3; i++  {
-            
+   
 			if ( elev_get_button_signal( BUTTON_CALL_UP, i ) == 1) {
 				buttonPressed.Floor =  i
 				buttonPressed.Button = BUTTON_CALL_UP
@@ -228,3 +226,17 @@ func ReadButtons() {
 	}
 }
 	
+func ReadSensors(sensorChannel chan int){
+	for{
+		if (io_read_bit(C.SENSOR_FLOOR1) != 0) {
+			sensorChannel <- 0
+		} else if (io_read_bit(C.SENSOR_FLOOR2) != 0) {
+			sensorChannel <- 1
+		} else if (io_read_bit(C.SENSOR_FLOOR3) != 0) {
+			sensorChannel <- 2
+		} else if (io_read_bit(C.SENSOR_FLOOR4) != 0) {
+			sensorChannel <- 3
+		} 
+	}
+}
+
