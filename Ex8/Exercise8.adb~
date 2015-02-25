@@ -46,6 +46,13 @@ procedure exercise7 is
       -------------------------------------------
       -- PART 1: Create the transaction work here
       -------------------------------------------
+   	if Error_Rate > Random(Gen) then
+		raise Count_Failed;
+	else
+		x_new := x+10;
+		--delay Duration(4);
+		return x_new;
+	end if;
    end Unreliable_Slow_Add;
 
 
@@ -62,7 +69,15 @@ procedure exercise7 is
       loop
          Put_Line ("Worker" & Integer'Image(Initial) & " started round" & Integer'Image(Round_Num));
          Round_Num := Round_Num + 1;
-
+		 
+		begin
+		Num := Unreliable_Slow_Add (Num);
+		exception
+			when Count_Failed =>
+				Manager.Signal_Abort;
+				Ada.Text_IO.Put_Line("Error happened");
+		end;
+		Manager.Finished;
          ---------------------------------------
          -- PART 2: Do the transaction work here          
          ---------------------------------------
@@ -76,6 +91,7 @@ procedure exercise7 is
             -------------------------------------------
             -- PART 2: Roll back to previous value here
             -------------------------------------------
+            Num := Prev;
          end if;
 
          Prev := Num;
