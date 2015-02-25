@@ -110,20 +110,6 @@ func elev_set_stop_lamp(value int) {
 	}
 }
 
-/*func elev_get_floor_sensor_signal() int {
-	if (io_read_bit(C.SENSOR_FLOOR1) != 0) {
-		return 0
-	} else if (io_read_bit(C.SENSOR_FLOOR2) != 0) {
-		return 1
-	} else if (io_read_bit(C.SENSOR_FLOOR3) != 0) {
-		return 2
-	} else if (io_read_bit(C.SENSOR_FLOOR4) != 0) {
-		return 3
-	} else {
-		return -1
-	}
-}*/
-
 func elev_set_floor_indicator(floor int) int {
 	if (floor < 0 || floor >= N_FLOORS) {
 		return ERROR;
@@ -198,7 +184,7 @@ func elev_get_button_signal(button int, floor int) int{
 	}
 }
 
-func ReadButtons(ReadButtonsChannel chan ButtonMessage) { 
+func readButtons(ReadButtonsChannel chan ButtonMessage) { 
 	var buttonPressed ButtonMessage
 	buttonPressed.Floor = -1
 	for{    	
@@ -229,7 +215,7 @@ func ReadButtons(ReadButtonsChannel chan ButtonMessage) {
 	}
 }
 	
-func ReadSensors(sensorChannel chan int){
+func readSensors(sensorChannel chan int){
 	for{
 		if (io_read_bit(C.SENSOR_FLOOR1) != 0) {
 			sensorChannel <- 0
@@ -243,12 +229,14 @@ func ReadSensors(sensorChannel chan int){
 	}
 }
 
-func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage, rec_channel chan UDPMessage){
+func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage, recChannel chan UDPMessage,sensorChannel chan int){
 	err := elev_init()
 	if(err == 0){
 		return
 	}
-	go UDP.recieveUdpMessage(rec_channel)	
+	go UDP.recieveUdpMessage(recChannel)
+	go readSensors(sensorChannel)
+	go readButtons(readButtonsChannel)	
 	for{
 		select{
 			case currentFloor := <- sensorChannel:
