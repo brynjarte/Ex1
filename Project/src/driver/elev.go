@@ -43,8 +43,6 @@ type ButtonMessage struct {
 	Button int
 }	
 
-//var ReadButtonsChannel = make(chan ButtonMessage, 1)
-
 func elev_init() int{
 	
 
@@ -54,13 +52,13 @@ func elev_init() int{
 	
 	for i := 0; i < N_FLOORS; i++ {
 		if i != 0 {
-			Elev_set_button_lamp(BUTTON_CALL_DOWN, i, 0)
+			elev_set_button_lamp(BUTTON_CALL_DOWN, i, 0)
 		}
 		if i != (N_FLOORS - 1) {
-			Elev_set_button_lamp(BUTTON_CALL_UP, i, 0)
+			elev_set_button_lamp(BUTTON_CALL_UP, i, 0)
 		}
 
-		Elev_set_button_lamp(BUTTON_COMMAND, i, 0)
+		elev_set_button_lamp(BUTTON_COMMAND, i, 0)
 	}
 
 	elev_set_stop_lamp(0)
@@ -228,7 +226,7 @@ func readSensors(sensorChannel chan int){
 		} 
 	}
 }
-
+/*
 func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage, recChannel chan UDPMessage,sensorChannel chan int){
 	err := elev_init()
 	if(err == 0){
@@ -242,16 +240,16 @@ func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage, rec
 			case currentFloor := <- sensorChannel:
 				elev_set_floor_indicator(currentFloor)
 			case buttonPushed := readButtonsChannel:
-				/*select{
+				select{
 					case sjekk ka heis så er best
-				//LEGG TIL I KØ*/
+				//LEGG TIL I KØ
 				elev_set_button_lamp(buttonPushed.Button, buttonPushed.Floor,1)
 			case msg := <- rec_channel:
 				/*select{
 					case sjekk ka heis så er best
-				//LEGG TIL I KØ*/
+				//LEGG TIL I KØ
 		}
 	}
-}
-				
+}*/
+
 				

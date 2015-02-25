@@ -3,7 +3,10 @@ package driver
 #cgo LDFLAGS: -lcomedi -lm
 #include "channels.h"
 */
-import "C"
+import (
+	"C"
+	//"UDP"
+	)
 
 const (
 	DIRN_DOWN = -1
@@ -35,16 +38,12 @@ var button_channel_matrix = [N_FLOORS][N_BUTTONS] int {
 	{C.BUTTON_UP4, C.BUTTON_DOWN4, C.BUTTON_COMMAND4},
 }
 
-
 type ButtonMessage struct {
 	Floor int
 	Button int
 }	
 
-var ReadButtonsChannel = make(chan ButtonMessage, 1)
-
-
-func Elev_init() int{
+func elev_init() int{
 	
 
 	if (io_init() == 0) {
@@ -53,13 +52,13 @@ func Elev_init() int{
 	
 	for i := 0; i < N_FLOORS; i++ {
 		if i != 0 {
-			Elev_set_button_lamp(BUTTON_CALL_DOWN, i, 0)
+			elev_set_button_lamp(BUTTON_CALL_DOWN, i, 0)
 		}
 		if i != (N_FLOORS - 1) {
-			Elev_set_button_lamp(BUTTON_CALL_UP, i, 0)
+			elev_set_button_lamp(BUTTON_CALL_UP, i, 0)
 		}
 
-		Elev_set_button_lamp(BUTTON_COMMAND, i, 0)
+		elev_set_button_lamp(BUTTON_COMMAND, i, 0)
 	}
 
 	elev_set_stop_lamp(0)
@@ -109,20 +108,6 @@ func elev_set_stop_lamp(value int) {
 	}
 }
 
-func elev_get_floor_sensor_signal() int {
-	if (io_read_bit(C.SENSOR_FLOOR1) != 0) {
-		return 0
-	} else if (io_read_bit(C.SENSOR_FLOOR2) != 0) {
-		return 1
-	} else if (io_read_bit(C.SENSOR_FLOOR3) != 0) {
-		return 2
-	} else if (io_read_bit(C.SENSOR_FLOOR4) != 0) {
-		return 3
-	} else {
-		return -1
-	}
-}
-
 func elev_set_floor_indicator(floor int) int {
 	if (floor < 0 || floor >= N_FLOORS) {
 		return ERROR;
@@ -144,7 +129,7 @@ func elev_set_floor_indicator(floor int) int {
 }
 
 
-func Elev_set_button_lamp(button int, floor int, value int) int{
+func elev_set_button_lamp(button int, floor int, value int) int{
 
 	if(floor < 0){
 		return ERROR
@@ -197,12 +182,12 @@ func elev_get_button_signal(button int, floor int) int{
 	}
 }
 
-func ReadButtons() { 
+func readButtons(ReadButtonsChannel chan ButtonMessage) { 
 	var buttonPressed ButtonMessage
 	buttonPressed.Floor = -1
 	for{    	
 		for  i := 0; i < 3; i++  {
-            
+   
 			if ( elev_get_button_signal( BUTTON_CALL_UP, i ) == 1) {
 				buttonPressed.Floor =  i
 				buttonPressed.Button = BUTTON_CALL_UP
@@ -224,9 +209,47 @@ func ReadButtons() {
 
 			ReadButtonsChannel<- buttonPressed
 			buttonPressed.Floor = -1
-			//<- ReadButtonsChannel	
-	
 		}
 	}
 }
 	
+func readSensors(sensorChannel chan int){
+	for{
+		if (io_read_bit(C.SENSOR_FLOOR1) != 0) {
+			sensorChannel <- 0
+		} else if (io_read_bit(C.SENSOR_FLOOR2) != 0) {
+			sensorChannel <- 1
+		} else if (io_read_bit(C.SENSOR_FLOOR3) != 0) {
+			sensorChannel <- 2
+		} else if (io_read_bit(C.SENSOR_FLOOR4) != 0) {
+			sensorChannel <- 3
+		} 
+	}
+}
+/*
+func Elevator(sensorChannel chan int, readButtonsChannel chan ButtonMessage, recChannel chan UDPMessage,sensorChannel chan int){
+	err := elev_init()
+	if(err == 0){
+		return
+	}
+	go UDP.recieveUdpMessage(recChannel)
+	go readSensors(sensorChannel)
+	go readButtons(readButtonsChannel)	
+	for{
+		select{
+			case currentFloor := <- sensorChannel:
+				elev_set_floor_indicator(currentFloor)
+			case buttonPushed := readButtonsChannel:
+				select{
+					case sjekk ka heis så er best
+				//LEGG TIL I KØ
+				elev_set_button_lamp(buttonPushed.Button, buttonPushed.Floor,1)
+			case msg := <- rec_channel:
+				/*select{
+					case sjekk ka heis så er best
+				//LEGG TIL I KØ
+		}
+	}
+}*/
+
+				

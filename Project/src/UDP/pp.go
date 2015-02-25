@@ -28,7 +28,7 @@ func ProcessPair(p Process, rec_channel chan UDPMessage){
 
 		if(p.Backup){
 			if(p.SequenceNumber == 0){
-				go recieveUdpMessage(rec_channel)//DERSOM KANALEN ER UNBUFFERED SÅ TRENGE ME IKKJE SJEKKD DA.
+				go RecieveUdpMessage(rec_channel)//DERSOM KANALEN ER UNBUFFERED SÅ TRENGE ME IKKJE SJEKKD DA.
 			}
 			for{
 				go timeOut(timeChannel)
@@ -73,7 +73,7 @@ func primary(){
 
 func Backup(rec_channel chan UDPMessage){
 	timeChannel := make(chan bool,1)
-	go recieveUdpMessage(rec_channel)
+	go RecieveUdpMessage(rec_channel)
 	for{
 		go timeOut(timeChannel)
 		select{

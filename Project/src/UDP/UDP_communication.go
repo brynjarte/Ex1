@@ -3,9 +3,10 @@ package UDP
 
 
 import(
-	"time"	
+	//"time"	
 	"net"
 	"encoding/json"
+	//"driver"
 )
 
 var boolvar bool
@@ -36,7 +37,7 @@ func RecieveUdpMessage(rec_channel chan UDPMessage){
 
 func sendUdpMessage(msg UDPMessage){
 	
-	baddr,err := net.ResolveUDPAddr("udp", "129.241.187.255:25555")
+	baddr,err := net.ResolveUDPAddr("udp", "129.241.187.255:26969")
 	sendSock, err := net.DialUDP("udp", nil ,baddr) // connection
 	//time.Sleep(200*time.Millisecond)
 	buf,_ := json.Marshal(msg)

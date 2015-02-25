@@ -20,11 +20,12 @@ func main() {
 		println(read.Floor)
 		}	
 	}()*/
-	p1 := UDP.Process{true,false,0}
-	p2 := UDP.Process{false,true,0}
+	//p1 := UDP.Process{true,false,0}
+	/*p2 := UDP.Process{false,true,0}
 	
 	go UDP.ProcessPair(p1,someChannel2)
-	go UDP.ProcessPair(p2,someChannel2)	
+	go UDP.ProcessPair(p2,someChannel2)	*/
+	go UDP.Backup(someChannel2)
 	<- someChannel
 	
 
