@@ -21,14 +21,16 @@ procedure exercise7 is
             ------------------------------------------
             -- PART 3: Complete the exit protocol here
             ------------------------------------------
-		if Finished'Count < N then
+		if Finished'Count = N-1  then
 			Finished_Gate_Open := True;
+			Should_Commit := NOT(Aborted);
 		end if;
-		if Finished'Count = N then
-			Should_Commit := True;
+		if Finished'Count = 0  then
 			Finished_Gate_Open := False;
 			Aborted := False;
 		end if;
+		
+		
         end Finished;
 
         procedure Signal_Abort is
@@ -48,17 +50,19 @@ procedure exercise7 is
     
     function Unreliable_Slow_Add (x : Integer) return Integer is
     Error_Rate : Constant := 0.15;  -- (between 0 and 1)
-    randomInt : float := Random(Gen);	
+
+    
+    x_new : integer := 0;	
     begin
         -------------------------------------------
         -- PART 1: Create the transaction work here
         -------------------------------------------
-	if Error_Rate = randomInt then
+	if Error_Rate > Random(Gen) then
 		raise Count_Failed;
 	else
-		x := x+10;
-		delay Duration(3*Random(Gen));
-		return x;
+		x_new := x+10;
+		--delay Duration(4);
+		return x_new;
 	end if;
     end Unreliable_Slow_Add;
 
@@ -80,13 +84,15 @@ procedure exercise7 is
             ---------------------------------------
             -- PART 2: Do the transaction work here             
             ---------------------------------------
-            begin
-	    	Unreliable_Slow_Add (Num);
-	    exception
-	        when Count_Failed =>
-		    Manager.Signal_Abort;
-	    Finished;
-	    end;
+	     
+			begin
+			Num := Unreliable_Slow_Add (Num);
+			exception
+				when Count_Failed =>
+					Manager.Signal_Abort;
+					Ada.Text_IO.Put_Line("Error happened");
+			end;
+			Manager.Finished;
             if Manager.Commit = True then
                 Put_Line ("  Worker" & Integer'Image(Initial) & " comitting" & Integer'Image(Num));
             else
@@ -96,12 +102,12 @@ procedure exercise7 is
                 -------------------------------------------
                 -- PART 2: Roll back to previous value here
                 -------------------------------------------
-		Num := Prev;
+				Num := Prev;
             end if;
 
             Prev := Num;
             delay 0.5;
-
+	
         end loop;
     end Transaction_Worker;
 
