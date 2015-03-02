@@ -2,7 +2,7 @@ package UDP
 
 import (
 	"fmt"
-	"strconv"
+	//"strconv"
 	"time"
 	
 )
@@ -12,7 +12,7 @@ type Process struct {
 	Backup bool
 	SequenceNumber int
 }
-
+/*
 func ProcessPair(p Process, rec_channel chan UDPMessage){
 	
 	for{
@@ -54,13 +54,8 @@ func ProcessPair(p Process, rec_channel chan UDPMessage){
 		}
 
 	}
-}	
+}	*/
 
-
-func timeOut(timeChannel chan bool){
-	time.Sleep(3*time.Second)
-	timeChannel <- true
-}
 
 func primary(){
 	
@@ -72,14 +67,12 @@ func primary(){
 }
 
 func Backup(rec_channel chan UDPMessage){
-	timeChannel := make(chan bool,1)
 	go RecieveUdpMessage(rec_channel)
 	for{
-		go timeOut(timeChannel)
 		select{
 			case <-rec_channel: 
 				fmt.Println("KONTAKT MED MASTER")	
-			case <-timeChannel:
+			case <-time.After(3*time.Second):
 				go primary()
 				fmt.Println("Startar ny master")
 			}

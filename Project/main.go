@@ -25,7 +25,7 @@ func main() {
 	
 	go UDP.ProcessPair(p1,someChannel2)
 	go UDP.ProcessPair(p2,someChannel2)	*/
-	go UDP.Backup(someChannel2)
+	go UDP.Slave(someChannel2)
 	<- someChannel
 	
 

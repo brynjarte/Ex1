@@ -2,11 +2,11 @@
 package UDP
 
 
-import(
-	//"time"	
+import(	
 	"net"
 	"encoding/json"
-	//"driver"
+	"time"
+	"fmt"
 )
 
 var boolvar bool
@@ -22,7 +22,7 @@ type UDPMessage struct{
 func RecieveUdpMessage(rec_channel chan UDPMessage){
 	
 	buffer := make([]byte,1024) 
-	raddr,_ := net.ResolveUDPAddr("udp", ":25555")
+	raddr,_ := net.ResolveUDPAddr("udp", ":26969")
 	recievesock,_ := net.ListenUDP("udp", raddr)
 	var rec_msg UDPMessage
 	for {
@@ -37,7 +37,7 @@ func RecieveUdpMessage(rec_channel chan UDPMessage){
 
 func sendUdpMessage(msg UDPMessage){
 	
-	baddr,err := net.ResolveUDPAddr("udp", "129.241.187.255:26969")
+	baddr,err := net.ResolveUDPAddr("udp", "192.168.1.69:26969")
 	sendSock, err := net.DialUDP("udp", nil ,baddr) // connection
 	//time.Sleep(200*time.Millisecond)
 	buf,_ := json.Marshal(msg)
@@ -47,5 +47,31 @@ func sendUdpMessage(msg UDPMessage){
 	}
 	
 }
+
+
+func master(){
+	
+	msg := UDPMessage{"I'm alive",1}
+	for {
+		sendUdpMessage(msg)
+		time.Sleep(1*time.Second)
+	}
+}
+
+func Slave(rec_channel chan UDPMessage){
+	go RecieveUdpMessage(rec_channel)
+	for{
+		select{
+			case <-rec_channel: 
+				fmt.Println("KONTAKT MED MASTER")	
+			case <-time.After(3*time.Second):
+				go master()
+				fmt.Println("Startar ny master")
+			}
+	}
+}
+
+
+
 
 

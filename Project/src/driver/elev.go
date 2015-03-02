@@ -57,10 +57,6 @@ func elev_init() int{
 	elev_set_door_open_lamp(0)
 	elev_set_floor_indicator(0)
 
-	//NewtorkChannel := make(chan int, 1)
-	//ReadSensorsChannel := make(chan int, 1)
-	
-
 	return 1
 }
 
@@ -84,7 +80,7 @@ func elev_set_door_open_lamp(value int) {
 	}
 }
 
-func elev_get_obstruction_signal() int {
+/*func elev_get_obstruction_signal() int {
 	return io_read_bit(OBSTRUCTION)
 }
 
@@ -98,7 +94,7 @@ func elev_set_stop_lamp(value int) {
 	} else {
 		io_clear_bit(LIGHT_STOP)
 	}
-}
+}*/
 
 func elev_set_floor_indicator(floor int) int {
 	if (floor < 0 || floor >= N_FLOORS) {
