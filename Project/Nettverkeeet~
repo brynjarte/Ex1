@@ -1,0 +1,16 @@
+
+
+Master:
+
+Velgar kven som skal ta bestillingar utanfor heis.
+Sjekkar at det ikkje er fleire mastera.
+
+Mottar:HeisID, alle bestillingar utanfor heis(Etasje, knappetrykk), currentfloor,retning,i'm alive.
+Sendar: ACK, melding i retur, ordre utanfor heis. 
+
+Slave: 
+Har sine bestillingar inni heis, sendar alle trykk utanfor.
+Blir master i prioritert rekkefølge dersom den ikkje mottar noko.
+
+Sendar: I'm alive, currentfloor, retning, bestillingar utanfor heis.
+Mottar: Ack og bestillingar.

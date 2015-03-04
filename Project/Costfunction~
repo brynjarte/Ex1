@@ -1,0 +1,7 @@
+ Master har kontroll på alle bestillingar på alle heisane + currentfloor + retning.
+ 
+ 1. Heis utan bestillingar: Tar ordren uansett. Dersom det er fleire ledige, så tar den nærmeste den, dersom alle er lika nærme, så tar den med lavast heisID.
+ 2. Heis i bestilt etasje: Tar bestillinga
+ 3. else : Den nærmeste med rett retning tar den.
+ 
+ Heisen fortsetter i samme retning til den ikkje har fleire bestillingar i retninga.
