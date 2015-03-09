@@ -1,0 +1,33 @@
+
+Koss ta in channels? Som argument?
+Visst ein heis dør, skal dei andre overta køen?
+Skal external-buttons lysa hos alle om me får ein bestilling, eller kun hos den heisen som tar bestillinga?
+Domt med mangen channels???
+globale variabler?
+
+
+TODO: Er da fleire mastera??
+
+type SlaveMessage struct{
+	ElevInfo Elevator
+	Button ButtonMessage
+	NewOrder bool
+}
+
+type ButtonMessage struct {
+	Floor int
+	Button int
+}
+
+type Elevator struct {
+	ElevatorID int	
+	CurrentFloor int
+	Direction int
+}
+
+type MasterMessage struct {
+	ElevatorID int
+	NewOrder bool
+	Button ButtonMessage
+}
+

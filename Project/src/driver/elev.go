@@ -170,10 +170,10 @@ func elev_get_button_signal(button int, floor int) int{
 	}
 }
 
-func readButtons(ReadButtonsChannel chan ButtonMessage) { 
+func readButtons(InternalOrderChannel chan ButtonMessage, ExternalOrderChannel chan ButtonMessage) { 
 	var buttonPressed ButtonMessage
-	buttonPressed.Floor = -1
 	for{    	
+		buttonPressed.Floor = -1
 		for  i := 0; i < 3; i++  {
    
 			if ( elev_get_button_signal( BUTTON_CALL_UP, i ) == 1) {
@@ -194,9 +194,13 @@ func readButtons(ReadButtonsChannel chan ButtonMessage) {
 		}
 	
 		if (buttonPressed.Floor != -1) {
+			
 
-			ReadButtonsChannel<- buttonPressed
-			buttonPressed.Floor = -1
+			if (buttonPressed.Button = BUTTON_COMMAND) {
+				InternalOrderChannel<- buttonPressed
+			} else {
+				ExternalOrderChannel<- buttonPressed
+			}
 		}
 	}
 }
