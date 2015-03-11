@@ -101,7 +101,7 @@ func elev_set_floor_indicator(floor int) int {
 		return ERROR;
 	}
 
-	if (floor & 0x02) != 0 {
+	if (floor & 0x02) != 0 { 
 		io_set_bit(LIGHT_FLOOR_IND1)
 	} else {
 		io_clear_bit(LIGHT_FLOOR_IND1)
@@ -170,10 +170,10 @@ func elev_get_button_signal(button int, floor int) int{
 	}
 }
 
-func readButtons(ReadButtonsChannel chan ButtonMessage) { 
+func readButtons(InternalOrderChannel chan ButtonMessage, ExternalOrderChannel chan ButtonMessage) { 
 	var buttonPressed ButtonMessage
-	buttonPressed.Floor = -1
 	for{    	
+		buttonPressed.Floor = -1
 		for  i := 0; i < 3; i++  {
    
 			if ( elev_get_button_signal( BUTTON_CALL_UP, i ) == 1) {
@@ -194,9 +194,13 @@ func readButtons(ReadButtonsChannel chan ButtonMessage) {
 		}
 	
 		if (buttonPressed.Floor != -1) {
+			
 
-			ReadButtonsChannel<- buttonPressed
-			buttonPressed.Floor = -1
+			if (buttonPressed.Button == BUTTON_COMMAND) {
+				InternalOrderChannel<- buttonPressed
+			} else {
+				ExternalOrderChannel<- buttonPressed
+			}
 		}
 	}
 }
