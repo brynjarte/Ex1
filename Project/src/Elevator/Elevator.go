@@ -116,5 +116,43 @@ func Slave(MasterResponseChannel chan MasterMessage, externalOrderChannel chan B
 	}
 }
 
+func Elevator(){
+	sensorChannel := make(chan int,1)
+	var prevFloor int = 0
+    	go driver.ReadSensors(sensorChannel)
+	for{
+		select{
+			case currentFloor := <-sensorChannel:// FLOOR REACHED
+				prevFloor = currentFloor
+				movingDirection := prevFloor-currentFloor
+				//SJEKK OM ME SKAL STOPPA.
 
+			case newExternalOrder := <- addOrderChannel:
+				if(newExternalOrder.ElevatorID == elevator.ElevatorID){
+		        		Queue.AddOrder(newExternalOrder.Button,newExternalOrder.elevatorID, currentFloor, movingDirection)
+                                        } 
+                                	driver.Elev_set_button_lamp(newExternalOrder.Button, newExternalOrder.Floor, 1)
+
+
+		}
+	}
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				
 

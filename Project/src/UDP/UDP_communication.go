@@ -110,12 +110,13 @@ func master(SlaveResponseChannel chan SlaveMessage, MasterResponseChannel chan M
                                 if message.NewOrder{
                                         externalOrderChannel <- message.Button
                                 } else{
-                                	fmt.Println("Slave i'm alive)  
+                                	fmt.Println("Slave i'm alive)  // KANSKJE sjekka ordrelista opp mot master si?? si
                         	}                
 	                
                         case newOrder := <-externalOrderChannel:
                                 // SEND PÅ EIN KANAL ELLER GJER SÅNN : elevatorID := CalculateCost(message.Button) // RETURNS kva heis som tar ordren
-                                sendUdpMessageFromMaster(MasterMessage{elevator.ElevInfo.ElevatorID,true,newOrder})
+                                var elevatorID 
+                                sendUdpMessageFromMaster(MasterMessage{elevatorID,true,newOrder})
                                 //TURN ON LIGHT
 				//SEND PÅ KANAL ELLER BRUKA FUNKSJONEN DIREKTE??
                                
@@ -125,18 +126,18 @@ func master(SlaveResponseChannel chan SlaveMessage, MasterResponseChannel chan M
                               			//SEND PÅ KANAL ELLER BRUKA FUNKSJONEN DIREKTE??             
             							break                                                    
                         			}
-        							select {
-	        							case reply := <-SlaveResponseChannel:
-		        							if(reply.ElevInfo.ElevatorID == elevatorID){
-                                           	  // Har fått ack av heisen som tar bestillingo.
-                                           	  //ADD ORDER
-                                       			break
-                                        	} 
-						       			case <-time.After(200*time.Millisecond):
-                                    		// NO ACK.
-								       	 	//removeElvatorFromCalculateCost(elevatorID)
-                                        	//elevatorID := CalculateCost(message.Button) // RETURNS kva heis som tar ordren
-                                        	sendUdpMessageFromMaster(MasterMessage{elevatorID,true,newOrder})
+        					select {
+							case reply := <-SlaveResponseChannel:
+        							if(reply.ElevInfo.ElevatorID == elevatorID){
+		           	  					// Har fått ack av heisen som tar bestillingo.
+		           	  					//ADD ORDER
+	               							break
+                                        					} 
+				       			case <-time.After(200*time.Millisecond):
+				                    		// NO ACK.
+								//removeElvatorFromCalculateCost(elevatorID)
+				                        	//elevatorID := CalculateCost(message.Button) // RETURNS kva heis som tar ordren
+				                        	sendUdpMessageFromMaster(MasterMessage{elevatorID,true,newOrder})
     
 					        }
 				        }
@@ -161,27 +162,17 @@ func master(SlaveResponseChannel chan SlaveMessage, MasterResponseChannel chan M
 
 func Slave(MasterResponseChannel chan MasterMessage, externalOrderChannel chan ButtonMessage, terminate chan bool, SlaveResponseChannel chan SlaveMessage){
  	var elevator = Elevator{2,0,0}
-	var prevFloor int = 0
 	go recieveUdpMessageMaster(MasterResponseChannel,terminate)
-    	sensorChannel := make(chan int,1)
-    	go driver.ReadSensors(sensorChannel)
+    	
 	for{
-		select{
-			case currentFloor := <-sensorChannel:
-				prevFloor = currentFloor
-				movingDirection := prevFloor-currentFloor
-				
+		select{				
 			case reply:= <-MasterResponseChannel: 
 				fmt.Println("i'm alive frå master")
-				if(reply.NewOrder){
-					if(reply.ElevatorID == elevator.ElevatorID){
-			        		Queue.AddOrder(reply.Button,reply.elevatorID, currentFloor, movingDirection)
-                                        } 
-                                	driver.Elev_set_button_lamp(reply.Button, reply.Floor, 1) 
+				//Send inn på rett kanal. Ka gjer me med at master sende meldinga heila tido??
                                 } 
 			case newOrder := <-externalOrderChannel:
 				for i := 0; i < 4; i++ {
-					sendUdpMessageSlave(SlaveMessage{elevator, newOrder, true})
+					sendUdpMessageFromSlave(SlaveMessage{elevator, newOrder, true})
 					select {
 						case reply := <-MasterResponseChannel:
 							i = 4
@@ -200,7 +191,7 @@ func Slave(MasterResponseChannel chan MasterMessage, externalOrderChannel chan B
 				}
 					
 			case <-time.After(3*time.Second):
-                fmt.Println("STARTER MASTER")
+                		fmt.Println("STARTER MASTER")
 				terminate <- true
 				go master(SlaveResponseChannel,MasterResponseChannel,terminate,externalOrderChannel)
                                 
