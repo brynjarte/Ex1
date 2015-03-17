@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 package Elevator
 
 import(
@@ -35,8 +36,7 @@ func Elevator(){
 				if(newExternalOrder.ElevatorID == elevator.ElevatorID){
 		        		Queue.AddOrder(newExternalOrder.Button,newExternalOrder.elevatorID, currentFloor, movingDirection)
                                         } 
-                                	driver.Elev_set_button_lamp(newExternalOrder.Button, newExternalOrder.Floor, 1)
-           	
+                                	driver.Elev_set_button_lamp(newExternalOrder.Button, newExternalOrder.Floor, 1)           	
            	case updatedElevInfo := <- UpdateElevatorInfoChannel:
 				if(elev1.ElevatorID == updatedElevInfo.ElevatorID){
 					elev1 = updatedElevInfo
@@ -51,19 +51,4 @@ func Elevator(){
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-				
 
