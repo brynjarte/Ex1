@@ -184,9 +184,9 @@ func master(CompletedOrderChannel chan Message, ExternalOrderChannel chan Button
 			case completedOrder := <-CompletedOrderChannel:
 				sendUdpMessage(Message{false, true, true, false, -1, elevator, completedOrder.Button}) // FJERNER ORDREN EIN ANNA PLASS?
 
-			case elevInfo := <-ElevInfoChannel:
+			//case elevInfo := <-ElevInfoChannel:
 				//OPPDATER INFO OM HEISAR.
-				break
+//				break
 
      	}      
     }

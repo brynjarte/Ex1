@@ -5,8 +5,8 @@ import(
 	"driver"
 )
 
-const elevators int = 3
-const floors int = 3
+const elevators int = 1 
+const floors int = 1
 const UP int = 0
 const DOWN int = 1
 
@@ -17,7 +17,7 @@ var numberInQueue [elevators] int
 var ordersInDirection[2] int;
 
 func queueInit(){
-
+	//FileHandler.Read(elevators, floors, queue)
 	ordersInDirection[0] = 0
 	ordersInDirection[1] = 0
 
@@ -35,6 +35,29 @@ func queueInit(){
 	for elev:= 0; elev < elevators; elev++{
 			numberInQueue [elev] = 0
 	}
+}
+
+func resizeArrays(numFloors int, numElevs int) {
+	
+	//Floor number change
+	if numFloors > floors {
+		for i := floors ; i < numFloors; i++ {
+			var extApp [1][2*elevators] bool
+			externalOrders = append(externalOrders, extApp)
+
+			var app [1][2] bool 
+			queue = append(queue, app)
+		}
+	}
+
+	//Elevator number change
+
+
+}
+
+func AddOrderFromBackup(direction int, floor int, value bool){
+
+	queue[floor][direction] = value
 }
 
 func AddOrder(order UDP.ButtonMessage,elevatorID int, currentFloor int, movingDirection int){
