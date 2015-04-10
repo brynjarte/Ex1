@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 package UDP
 
@@ -6,7 +7,7 @@ import(
 	"net"
 	"encoding/json"
 	"time"
-    "fmt"
+    	"fmt"
 )
 
 type SlaveMessage struct{
@@ -34,7 +35,6 @@ type MasterMessage struct {
 	Ack bool
 	NewOrder bool
 	Button ButtonMessage
-
 }
 
 
@@ -134,7 +134,6 @@ func master(SlaveResponseChannel chan SlaveMessage, MasterResponseChannel chan M
 								// Har fått ack av heisen som tar bestillingo.
 								//ADD ORDER in masterQUEUE
 								SetLightChannel <- reply.Button
-								//SEND PÅ KANAL ELLER BRUKA FUNKSJONEN DIREKTE??
 								break
 													} 
 						case <-time.After(200*time.Millisecond):
@@ -222,7 +221,7 @@ func Slave(MasterResponseChannel chan MasterMessage, externalOrderChannel chan B
 					}
 				}
 				
-			case elevatorInfo: <- ElevatorinfoChannel:
+			case elevatorInfo := <- ElevatorinfoChannel:
 				sendUdpMessageFromSlave(SlaveMessage{elevatorInfo, ButtonMessage{0,0,0}, false})
 		
 			case <-time.After(3*time.Second):
