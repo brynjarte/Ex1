@@ -4,6 +4,7 @@ import(
 	"net"
 	"encoding/json"
 	"time"
+	"driver"
 	//"fmt"
 )
 
@@ -15,13 +16,7 @@ type Message struct{
 	MessageTo int
 
 	ElevInfo Elevator
-	Button ButtonMessage
-}
-
-type ButtonMessage struct {
-	Floor int
-	Button int
-	Light int
+	Button driver.ButtonMessage
 }
 
 type Elevator struct {
@@ -32,6 +27,7 @@ type Elevator struct {
 }
 
 
+
 func recieveUdpMessage(responseChannel chan Message){
 	
 	buffer := make([]byte,1024)
@@ -39,9 +35,9 @@ func recieveUdpMessage(responseChannel chan Message){
 	recievesock,_ := net.ListenUDP("udp", raddr)
 	var recMsg Message
 	for {
-				mlen , _,_ := recievesock.ReadFromUDP(buffer)
-				json.Unmarshal(buffer[:mlen], &recMsg)
-				responseChannel <- recMsg 
+		mlen , _,_ := recievesock.ReadFromUDP(buffer)
+		json.Unmarshal(buffer[:mlen], &recMsg)
+		responseChannel <- recMsg 
 	}
 }
 
@@ -58,7 +54,7 @@ func sendUdpMessage(msg Message){
 	
 }
 
-func Slave(CompletedOrderChannel chan Message, externalOrderChannel chan ButtonMessage, ElevInfoChannel chan Elevator, AddOrderChannel chan Message, RemoveOrderChannel chan Message){
+func Slave(CompletedOrderChannel chan Message, externalOrderChannel chan driver.ButtonMessage, ElevInfoChannel chan Elevator, AddOrderChannel chan Message, RemoveOrderChannel chan Message){
 	
 	ResponseChannel := make(chan Message,1)
  	var elevator = Elevator{2,0,0}
@@ -121,13 +117,13 @@ func Slave(CompletedOrderChannel chan Message, externalOrderChannel chan ButtonM
 				
 			//Skifter retn. el. etg.: 
 			case elevatorInfo := <- ElevInfoChannel:
-				sendUdpMessage(Message{false, false, false, true, -1, elevatorInfo, ButtonMessage{0,0,0}})
+				sendUdpMessage(Message{false, false, false, true, -1, elevatorInfo, driver.ButtonMessage{0,0,0}})
 		}
 	}
 }
 
 
-func master(CompletedOrderChannel chan Message, ExternalOrderChannel chan ButtonMessage, ElevInfoChannel chan Elevator, AddOrderChannel chan Message, RemoveOrderChannel chan Message, ResponseChannel chan Message){
+func master(CompletedOrderChannel chan Message, ExternalOrderChannel chan driver.ButtonMessage, ElevInfoChannel chan Elevator, AddOrderChannel chan Message, RemoveOrderChannel chan Message, ResponseChannel chan Message){
 
 	var elevator = Elevator{2,0,0}
 

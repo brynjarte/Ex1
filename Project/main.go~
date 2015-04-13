@@ -2,7 +2,7 @@ package main
 
 import (
 	//"driver"
-	"FileHandler"
+	"Elevator"
 )
 
 func main() {
@@ -14,9 +14,9 @@ func main() {
 
 	someChannel := make(chan int,1)
 	
-	var queue [4][2] bool
+	//var queue [4][2] bool
 
-	go FileHandler.Read(69,69)
+	go Elevator.Elevator()
 
 	<- someChannel
 	

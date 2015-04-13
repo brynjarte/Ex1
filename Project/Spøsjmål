@@ -1,12 +1,9 @@
 
-Koss ta in channels? Som argument?
-Visst ein heis dør, skal dei andre overta køen?
-Skal external-buttons lysa hos alle om me får ein bestilling, eller kun hos den heisen som tar bestillinga? - Hos alle (les oppgavetekst)
-Domt med mangen channels???
-globale variabler?
-
-
-
+Spørsmål til Mikal: 
+Fleire buttonMessage structs, i UDP og driver?
+Elevator structen bør ligga ein anna plass.
+Skal me behandla meldinga i master/slave, eller skal me berre senda meldingen vidare til Elevator??
+KOR SKAL BUTTONMESSAGE LIGGA? AKKURAT NO SÅ INKLUDERE ME DRIVER I QUEUE.
 
 
 
@@ -15,36 +12,4 @@ globale variabler?
 -når online igjen, sett på lys.
 
 
-
-
-
-
-
-
-TODO: 
-Er da fleire mastera??
-Sett på external lights.
-
-type SlaveMessage struct{
-	ElevInfo Elevator
-	Button ButtonMessage
-	NewOrder bool
-}
-
-type ButtonMessage struct {
-	Floor int
-	Button int
-}
-
-type Elevator struct {
-	ElevatorID int	
-	CurrentFloor int
-	Direction int
-}
-
-type MasterMessage struct {
-	ElevatorID int
-	NewOrder bool
-	Button ButtonMessage
-}
 
