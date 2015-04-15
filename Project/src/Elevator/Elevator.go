@@ -25,8 +25,8 @@ func Elevator(){
 	//ELEV
 	wait := make(chan int, 1)
 	run := make(chan int, 1)
-    emptyQueue := make(chan int, 1)
-    stop := make(chan int, 1)
+    	emptyQueue := make(chan int, 1)
+    	stop := make(chan int, 1)
 
 	//driver
 	newOrderChannel := make(chan driver.ButtonMessage,1)

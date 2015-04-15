@@ -63,10 +63,10 @@ func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan in
 			case newOrder := <- addOrderChannel:
 				addOrder(1, newOrder, currentFloor, direction)
 
-			case <- removeOrderChannel:
+			case <- removeOrderChannel: 
 				println("QUEUE: REMOVEORDER")
 				removeOrder(1, currentFloor, direction, &turn)
-				break
+				
 				
 			case movingDirection := <- checkDirectionChannel:
 				direction = movingDirection
@@ -75,7 +75,7 @@ func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan in
 					setDirectionChannel <- direction
 					break
 				} else{*/
-					newDirection := setDirection(1, currentFloor, direction, &turn)
+					newDirection := setDirection(1, currentFloor, &turn)
 					direction = newDirection
 					setDirectionChannel <- newDirection
 					break
@@ -99,20 +99,17 @@ func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan in
 	}
 }
 
-func setDirection(elevatorID int, currentFloor int, direction int, turn *bool) int{
+func setDirection(elevatorID int, currentFloor int, turn *bool) int{
     *turn = false
 	if(ordersInDirection[UP] != 0){
 		if(checkIfOrdersInDirection(elevatorID, currentFloor, UP, turn) != -1){
-			println("VOSS", *turn)
         	return UP
 		} else{
-			println("VOSS DOWN",*turn)
 			*turn = true
 			return DOWN
 		}
     }else if(ordersInDirection[DOWN] != 0){
 		if(checkIfOrdersInDirection(elevatorID, currentFloor, DOWN, turn) != -1){
-
         	return DOWN
 		}else{
 
@@ -120,7 +117,7 @@ func setDirection(elevatorID int, currentFloor int, direction int, turn *bool) i
 			return UP
 		}
     }
-	println("RETURNERER -1")
+	println("SETDIRECTION DONE: -1")
 	return -1
 }
 
@@ -182,19 +179,14 @@ func checkIfOrdersInDirection(elevatorID int, currentFloor int, direction int, t
 
 func checkOrders(elevatorID int, currentFloor int, direction int, turn *bool) bool{
 	if (direction == UP) {	
-		if(allQueues[elevatorID][currentFloor].UP == 1){
+		if(allQueues[elevatorID][currentFloor].UP == 1 || (*turn && (checkIfOrdersInDirection(elevatorID, currentFloor, DOWN, turn) == currentFloor))){
 			//println(allQueues[elevatorID][currentFloor].UP)
 			return true
-		} else if(*turn || checkIfOrdersInDirection(elevatorID, currentFloor, DOWN, turn) == currentFloor){
-			return true
-			
 		}
 	} else if (direction == DOWN) {
-		if(allQueues[elevatorID][currentFloor].DOWN == 1){
+		if(allQueues[elevatorID][currentFloor].DOWN == 1 || (*turn && checkIfOrdersInDirection(elevatorID, currentFloor, UP, turn) == currentFloor)){
 			//println(allQueues[elevatorID][currentFloor].DOWN)
 			return true
-		}else if(*turn || checkIfOrdersInDirection(elevatorID, currentFloor, UP, turn) == currentFloor){
-			return true		
 		}
 	}
 	return false
@@ -249,11 +241,11 @@ func addOrder(elevatorID int, order driver.ButtonMessage, currentFloor int, movi
 	
 func removeOrder(elevatorID int, floor int, movingDirection int, turn *bool) {
 	numberInQueue[elevatorID]--
-	if (movingDirection == UP || (movingDirection == DOWN && *turn)) {
+	if ((movingDirection == UP && !(*turn)) || ((movingDirection == DOWN) && *turn)) {
 		allQueues[elevatorID][floor].UP = 0
 		ordersInDirection[UP]--
 		//println("Sletter ordre opp") 
-	}else if (movingDirection == DOWN || (movingDirection == UP && *turn)) {
+	}else if ((movingDirection == DOWN) && !(*turn) || ((movingDirection == UP) && *turn)) {
 		allQueues[elevatorID][floor].DOWN = 0
 		ordersInDirection[DOWN]--
 		//println("Sletter ordre ned")  
