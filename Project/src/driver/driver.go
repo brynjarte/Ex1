@@ -209,7 +209,8 @@ func elev_get_button_signal(button int, floor int) int{
 
 func readButtons(NewOrderChannel chan ButtonMessage) {
 	var buttonPressed ButtonMessage
-	for{    	
+	for{   
+		//time.Sleep(50*time.Millisecond) 	
 		buttonPressed.Floor = -1
 		for  i := 0; i < 3; i++  {
    
@@ -277,28 +278,25 @@ func setExternalLights(externalOrders [][] bool, elevatorID int) {
 }
 
 
-func stopped(currentFloor int, direction int){
+func stop(currentFloor int, direction int, stoppedChannel chan int){
 	elev_set_speed(0)
 	elev_set_door_open_lamp(1)
-
 	elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_COMMAND, 0})
 	if(direction == 0){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_UP, 0})
 	}else if (direction == 1){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_DOWN, 0})
 	}	
-	for{
-		select{
-			case <-time.After(3*time.Second):
-				elev_set_door_open_lamp(0)
-				return
-		}
-	}
+	time.Sleep(3*time.Second)
+	elev_set_door_open_lamp(0)
+	stoppedChannel <- 1
+
 }
 
 
-func Drivers(newOrderChannel chan ButtonMessage, sensorChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int,
-setButtonLightChannel chan ButtonMessage, setFloorLightChannel chan int){
+func Drivers(newOrderChannel chan ButtonMessage, floorReachedChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int,setButtonLightChannel chan ButtonMessage){
+	
+	sensorChannel := make(chan int, 1)
 	go readButtons(newOrderChannel)
 	go readSensors(sensorChannel)
 
@@ -308,21 +306,25 @@ setButtonLightChannel chan ButtonMessage, setFloorLightChannel chan int){
 	
 	for{
 		select{
-			case direction := <- setSpeedChannel:
+			case movingDirection := <- setSpeedChannel:
+				direction = movingDirection
 				if(direction == 0){
 					elev_set_speed(300)
 				} else if(direction == 1){
 					elev_set_speed(-300)
 				}
-			case  stopFloor := <- stopChannel:
-				stopped(currentFloor, direction)
-				stoppedChannel <- stopFloor
-
+			case	dir := <- stopChannel:
+				go stop(currentFloor, dir, stoppedChannel)	
+				
 			case button := <- setButtonLightChannel:
 				elev_set_button_lamp(button)
 
-			case currentFloor := <- setFloorLightChannel:
-				elev_set_floor_indicator(currentFloor)
+			case floor:= <- sensorChannel:
+				if(currentFloor != floor){
+					currentFloor = floor
+					elev_set_floor_indicator(currentFloor)
+					floorReachedChannel <- currentFloor
+				}
 			}
 		}
 }

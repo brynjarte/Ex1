@@ -1,5 +1,5 @@
 package FileHandler
-
+/*
 import ( 
 	//"io"
 	"os"
@@ -10,7 +10,7 @@ import (
 )
 
 
-func Read(NumOfElevs int, NumOfFloors int) ([][]bool) {
+func Read(NumOfElevs int, NumOfFloors int) {//([][]bool) {
 	
 	fd, err := os.Open("maxmekker.txt")
 	if err != nil {
@@ -30,7 +30,7 @@ func Read(NumOfElevs int, NumOfFloors int) ([][]bool) {
 	fmt.Println(NumOfElevs)
 	fmt.Println(NumOfFloors)
 
-	var queue [NumOfFloors][2]bool
+	//var queue [NumOfFloors][2]bool
 	
 	for i:=0; i < NumOfFloors; i++{
 		_, err = fmt.Fscanf(fd, "%d", &buf)

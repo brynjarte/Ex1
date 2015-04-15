@@ -3,3 +3,4 @@
  1. Heis utan bestillingar: Tar ordren uansett. Dersom det er fleire ledige, så tar den nærmeste den.
  2. Heis i bestilt etasje: Tar bestillinga
  3. else : Den nærmeste med rett retning tar den.
+hehe
