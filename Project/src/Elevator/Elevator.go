@@ -48,7 +48,7 @@ func Elevator(){
 	
 	direction := 1
 	currentFloor := 0
-	prevFloor := 0
+	prevFloor := 4
 
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel)
   	go Queue.Queue(addOrderChannel, removeOrderChannel, setDirectionChannel, checkDirectionChannel, checkOrdersChannel, stop)
