@@ -48,7 +48,7 @@ func Elevator(){
 	
 	direction := 1
 	currentFloor := 0
-	prevFloor := 4
+	prevFloor := 4 // FÅR ALLTID NED RETNING ETTER INTIT
 
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel)
   	go Queue.Queue(addOrderChannel, removeOrderChannel, setDirectionChannel, checkDirectionChannel, checkOrdersChannel, stop)
