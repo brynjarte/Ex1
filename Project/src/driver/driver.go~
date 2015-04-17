@@ -295,10 +295,12 @@ func stop(currentFloor int, direction int, stoppedChannel chan int){
 	println("driver: stop")
 	elev_set_speed(0)
 	elev_set_door_open_lamp(1)
+
 	elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_COMMAND, 0})
-	if(direction == 0){
+	if(direction == 0 || currentFloor == 0){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_UP, 0})
-	}else if (direction == 1){
+	}
+	if (direction == 1 || currentFloor == 3){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_DOWN, 0})
 	}
 	println("SLEEEPING")	
@@ -343,7 +345,6 @@ func Drivers(newOrderChannel chan ButtonMessage, floorReachedChannel chan int, s
 				stop(currentFloor, dir, stoppedChannel)	
 				
 			case button := <- setButtonLightChannel:
-				
 				println("DRIVER: setbutton")
 				elev_set_button_lamp(button)
 

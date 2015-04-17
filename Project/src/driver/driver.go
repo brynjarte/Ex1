@@ -292,16 +292,18 @@ func setExternalLights(externalOrders [][] bool, elevatorID int) {
 
 
 func stop(currentFloor int, direction int, stoppedChannel chan int){
-	println("driver: stop")
+	//println("driver: stop")
 	elev_set_speed(0)
 	elev_set_door_open_lamp(1)
+
 	elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_COMMAND, 0})
-	if(direction == 0){
+	if(direction == 0 || currentFloor == 0){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_UP, 0})
-	}else if (direction == 1){
+	}
+	if (direction == 1 || currentFloor == 3){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_DOWN, 0})
 	}
-	println("SLEEEPING")	
+	//println("SLEEEPING")	
 
 	//time.Sleep(3*time.Second)
 	//println("DONE SLEEEPING")
@@ -316,7 +318,7 @@ func closeDoor(stoppedChannel chan int){
 	<- time.After(3*time.Second)
 	elev_set_door_open_lamp(0)
 	stoppedChannel <- 1
-	println("DONE SLEEEPING")
+	//println("DONE SLEEEPING")
 	return
 
 }
@@ -334,20 +336,20 @@ func Drivers(newOrderChannel chan ButtonMessage, floorReachedChannel chan int, s
 	for{
 		select{
 			case movingDirection := <- setSpeedChannel:
-				println("DRIVER: SETSPEED" )
+				//println("DRIVER: SETSPEED" )
 				direction = movingDirection
 				setSpeed(direction)
 
 			case dir := <- stopChannel:
-				println("DRIVER: STOP")
+				//println("DRIVER: STOP")
 				stop(currentFloor, dir, stoppedChannel)	
 				
 			case button := <- setButtonLightChannel:
-				println("DRIVER: setbutton")
+				//println("DRIVER: setbutton")
 				elev_set_button_lamp(button)
 
 			case floor:= <- sensorChannel:
-				println("DRIVER: SENSORCHANNEL")
+				//println("DRIVER: SENSORCHANNEL")
 				currentFloor = floor
 				elev_set_floor_indicator(currentFloor)
 				floorReachedChannel <- currentFloor

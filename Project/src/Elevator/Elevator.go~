@@ -27,6 +27,7 @@ func Elevator(){
 	run := make(chan int, 1)
 	//emptyQueue := make(chan int, 1)
 	stop := make(chan int, 1)
+	orderInEmptyQueue := make(chan int, 1)
 
 	//driver
 	newOrderChannel := make(chan driver.ButtonMessage,1)
@@ -41,24 +42,26 @@ func Elevator(){
 	removeOrderChannel := make(chan int, 1)
 	nextOrderChannel := make(chan int, 1)
 	checkOrdersChannel := make(chan int, 1)
-    orderInEmptyQueueChannel := make(chan int, 1)
+	orderRemovedChannel := make(chan int, 1)
+
 	//UDP
 
 	nextOrderedFloor := 100
 	direction := 1
 	currentFloor := 0
 	prevFloor := 4 // FÅR ALLTID NED RETNING ETTER INTIT
-
+	
+	
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel)
-  	go Queue.Queue(addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueueChannel)
+  	go Queue.Queue(addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, orderRemovedChannel)
    	go handleOrders(addOrderChannel , setButtonLightChannel, newOrderChannel)
-
+	run <- 1
 
 	for{
 		select{
 			case arrivedAtFloor := <- floorReachedChannel:// FLOOR REACHED		
 				
-				println("ELEVATOR :FLOORREACHED")		
+				//println("ELEVATOR :FLOORREACHED")		
 				prevFloor = currentFloor
 				currentFloor = arrivedAtFloor
 				direction = prevFloor-currentFloor
@@ -75,54 +78,53 @@ func Elevator(){
 				checkOrdersChannel <- currentFloor
 				nextOrder := <- nextOrderChannel
 				nextOrderedFloor = nextOrder
-				println("NEXTORDEEER", nextOrderedFloor, "Current floor " , currentFloor)
+				//println("NEXTORDEEER", nextOrderedFloor, "Current floor " , currentFloor)
 				if(currentFloor == nextOrderedFloor ){
 					stop <- direction
 				}
 												 	
 			case <- stop:
 
-                println("ELEVATOR: StopChannel")
+                //println("ELEVATOR: StopChannel")
 				stopChannel <- direction
 				wait <- 1
                 break
 
 			case <- wait:
 				
-				
-                println("ELEVATOR :WAIT")
+                //println("ELEVATOR :WAIT")
 			 	wait:
 				for{
 					select{
 						case <- stoppedChannel:
-							removeOrderChannel <- currentFloor	
-							println("STOPPED")
-							//run <- 1
+							removeOrderChannel <- currentFloor
+							<- orderRemovedChannel	
+							//println("order removed")
+							run <- 1
 							break wait
 					}
 				}
 							
 			case <- run:
-        		println("ELEVATOR :RUN")
+        		//println("ELEVATOR :RUN")
 				checkOrdersChannel <- currentFloor
 				orderedFloor := <- nextOrderChannel
-				if(orderedFloor == -1){
+				nextOrderedFloor = orderedFloor
+				//println("ELEVATOR :RUN ORDER: ", orderedFloor)
+				if(nextOrderedFloor == -1){
 					break
 				}else{
-					if(orderedFloor > currentFloor){
+					if(nextOrderedFloor > currentFloor){
 					 	setSpeedChannel <- 0
-					}else if(orderedFloor < currentFloor){
+					}else if(nextOrderedFloor < currentFloor){
 						setSpeedChannel <- 1
 					}else{
 						stop <- direction
 					}
 				}
-					
-            case <- orderInEmptyQueueChannel:
-                println("ELEVATOR :EMPTYQUEUE")
+
+            case <- orderInEmptyQueue:
 				run <- 1
-				break
-                
 
 /*
 		  	case updatedElevInfo := <- UpdateElevatorInfoChannel:
@@ -155,8 +157,8 @@ func handleOrders(addOrderChannel chan driver.ButtonMessage, setButtonLightChann
 		//if(newInternalOrder.Button == driver.BUTTON_COMMAND){
 			addOrderChannel <- newOrder
 			setButtonLightChannel <- newOrder
-			println("ORDER ADDED")
-			//Queue.PrintQueue()
+			//println("ORDER ADDED")
+			Queue.PrintQueue()
 		//} else{
 			//Send til networkchannel
 		//}
