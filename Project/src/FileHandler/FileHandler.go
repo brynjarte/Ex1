@@ -98,7 +98,7 @@ func Write(numOfElevs int, numOfFloors int, queue []int) {
             panic(err)
     }
     
-	for i := 0;ilen(queue);i+=2{
+	for i := 0;i < len(queue);i+=2{
 	        // write a chunk
         if _, err := fmt.Fprintf(fo,"%d\t",queue[i]); err != nil {
             panic(err)

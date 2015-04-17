@@ -59,16 +59,16 @@ func elev_init(sensorChannel chan int) int{
 	}
 
 	elev_set_door_open_lamp(0)
-	elev_set_floor_indicator(0)
+	//elev_set_floor_indicator(0)
 
-	elev_set_speed(-300)
+	elev_set_speed(0)/*
 	for{
 		select{
 			case <- sensorChannel:
 				elev_set_speed(0)
 				return 1
 		}
-	}
+	}*/
 	
 	return 1
 }
@@ -209,14 +209,15 @@ func elev_get_button_signal(button int, floor int) int{
 
 func readButtons(NewOrderChannel chan ButtonMessage) {
 	var buttonPressed ButtonMessage
+	var lastButtonPressed ButtonMessage
 	for{   
-		//time.Sleep(50*time.Millisecond) 	
+		time.Sleep(50*time.Millisecond) 	
 		buttonPressed.Floor = -1
 		for  i := 0; i < 3; i++  {
    
 			if ( elev_get_button_signal( BUTTON_CALL_UP, i ) == 1) {
 				buttonPressed.Floor =  i
-				buttonPressed.Button = BUTTON_CALL_UP
+				buttonPressed.Button = BUTTON_CALL_UP	
 			} else if ( elev_get_button_signal( BUTTON_CALL_DOWN, i+1 ) == 1) {
 				buttonPressed.Floor =  i+1
 				buttonPressed.Button = BUTTON_CALL_DOWN
@@ -226,27 +227,39 @@ func readButtons(NewOrderChannel chan ButtonMessage) {
 		for i := 0; i < 4; i++ {
         
 			if ( elev_get_button_signal( BUTTON_COMMAND, i ) == 1 ) {
+				for ; elev_get_button_signal( BUTTON_COMMAND, i ) == 1 ; {
+				}
 				buttonPressed.Floor =  i
 				buttonPressed.Button = BUTTON_COMMAND
 			}
 		}
 	
-		if (buttonPressed.Floor != -1) {
+		if (buttonPressed.Floor != -1 && lastButtonPressed != buttonPressed) {
+			lastButtonPressed = buttonPressed
 			NewOrderChannel <- buttonPressed
 		}
 	}
 }
 	
 func readSensors(sensorChannel chan int){
+	lastFloor := -1
 	for{
-		if (io_read_bit(SENSOR_FLOOR1) != 0) {
-			sensorChannel <- 0
-		} else if (io_read_bit(SENSOR_FLOOR2) != 0) {
-			sensorChannel <- 1
-		} else if (io_read_bit(SENSOR_FLOOR3) != 0) {
-			sensorChannel <- 2
-		} else if (io_read_bit(SENSOR_FLOOR4) != 0) {
-			sensorChannel <- 3
+		time.Sleep(30*time.Microsecond)
+		if (io_read_bit(SENSOR_FLOOR1) != 0 && lastFloor != 0 ) {
+			lastFloor = 0
+			sensorChannel <- lastFloor
+
+		} else if (io_read_bit(SENSOR_FLOOR2) != 0 && lastFloor != 1 ) {
+			lastFloor = 1
+			sensorChannel <- lastFloor
+
+		} else if (io_read_bit(SENSOR_FLOOR3) != 0 && lastFloor != 2 ) {
+			lastFloor = 2
+			sensorChannel <- lastFloor
+			
+		} else if (io_read_bit(SENSOR_FLOOR4) != 0 && lastFloor != 3 ) {
+			lastFloor = 3
+			sensorChannel <- lastFloor
 		} 
 	}
 }
@@ -279,6 +292,7 @@ func setExternalLights(externalOrders [][] bool, elevatorID int) {
 
 
 func stop(currentFloor int, direction int, stoppedChannel chan int){
+	println("driver: stop")
 	elev_set_speed(0)
 	elev_set_door_open_lamp(1)
 	elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_COMMAND, 0})
@@ -286,46 +300,73 @@ func stop(currentFloor int, direction int, stoppedChannel chan int){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_UP, 0})
 	}else if (direction == 1){
 		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_DOWN, 0})
-	}	
-	time.Sleep(3*time.Second)
+	}
+	println("SLEEEPING")	
+
+	//time.Sleep(3*time.Second)
+	//println("DONE SLEEEPING")
+	<- time.After(3*time.Second)
 	elev_set_door_open_lamp(0)
 	stoppedChannel <- 1
 
+
 }
 
+func closeDoor(stoppedChannel chan int){
+	<- time.After(3*time.Second)
+	elev_set_door_open_lamp(0)
+	stoppedChannel <- 1
+	println("DONE SLEEEPING")
+	return
+
+}
 
 func Drivers(newOrderChannel chan ButtonMessage, floorReachedChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int,setButtonLightChannel chan ButtonMessage){
-	
+
 	sensorChannel := make(chan int, 1)
 	go readButtons(newOrderChannel)
 	go readSensors(sensorChannel)
 
 	elev_init(sensorChannel)
-	currentFloor := 0
+	currentFloor := -1
 	direction := -1
 	
 	for{
 		select{
 			case movingDirection := <- setSpeedChannel:
+				println("DRIVER: SETSPEED" )
 				direction = movingDirection
-				if(direction == 0){
-					elev_set_speed(300)
-				} else if(direction == 1){
-					elev_set_speed(-300)
-				}
-			case	dir := <- stopChannel:
-				go stop(currentFloor, dir, stoppedChannel)	
+				setSpeed(direction)
+
+			case dir := <- stopChannel:
+				println("DRIVER: STOP")
+				stop(currentFloor, dir, stoppedChannel)	
 				
 			case button := <- setButtonLightChannel:
+				println("DRIVER: setbutton")
 				elev_set_button_lamp(button)
 
 			case floor:= <- sensorChannel:
-				if(currentFloor != floor){
-					currentFloor = floor
-					elev_set_floor_indicator(currentFloor)
-					floorReachedChannel <- currentFloor
-				}
+				println("DRIVER: SENSORCHANNEL")
+				currentFloor = floor
+				elev_set_floor_indicator(currentFloor)
+				floorReachedChannel <- currentFloor
+				
+			default:
+				time.Sleep(30*time.Microsecond)			
 			}
+
 		}
 }
+
+func setSpeed(direction int){
+	
+				if(direction == 0){
+					elev_set_speed(150)
+				} else if(direction == 1){
+					elev_set_speed(-150)
+				}
+}
+
+
 

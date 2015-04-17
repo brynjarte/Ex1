@@ -1,97 +1,60 @@
 package Queue
 
-import(
-	"FileHandler"
-	"driver" // MÅ FINNA EI LØYSING, TRENGER KUN BUTTONMESSAGE
-	"math"
+import (
+	"driver"
 )
 
-var NumOfElevs int
-var NumOfFloors int
-const UP int = 0
-const DOWN int = 1
 
-var allQueues[5][] FileHandler.Directions
-var queue[] FileHandler.Directions
-var numberInQueue[5] int
-var ordersInDirection[2] int 
+const (
+	UP = 0
+	DOWN = 1
+)
 
-
-func queueInit(){
-	
-	queueList := FileHandler.Read(&NumOfElevs, &NumOfFloors)
-	
-	for j:=0;j<len(queueList);j+=2{
-		q := FileHandler.Directions{queueList[j], queueList[j+1]}
-		queue = append(queue, q)
-		//internalOrders = append(internalOrders,q)
-	}
-	//AddQueue(queue, ourID)
-	ordersInDirection[UP] = 0
-	ordersInDirection[DOWN] = 0
-	for i,_ := range queue {
-		ordersInDirection[UP] += queue[i].UP
-		ordersInDirection[DOWN] = queue[i].DOWN
-	}
-	
-	/*
-	for i:=0;i<NumOfElevs;i++ {
-		numInQueue = append(numInQueue,0}
-	}
-	*/
-	addQueue(1, queue)
-	addQueue(0, queue)
+type node struct{
+	value driver.ButtonMessage
+	next *node
 }
 
-func addQueue(elevatorID int, queue []FileHandler.Directions) {
-	allQueues[elevatorID] = queue
+type linkedList struct{
+	head *node
+	last *node
+	length int
 }
 
+//var allQueues map[int]linkedList
+
+var queue = linkedList{nil,nil,0}
+var qList [] int
+/*
+func init(){
+	//var queue = linkedList{nil,nil,0} 
+	//fetchMyQueue()
+	//allQueues[elevatorID] = queue
+}*/
 
 
-func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan int, setDirectionChannel chan int, checkDirectionChannel chan int, checkOrdersChannel chan int, stop chan int){//, findBestElevator chan ButtonMessage ){
-	turn := false
+func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan int, nextOrderChannel chan int, checkOrdersChannel chan int, orderInEmptyQueueChannel chan int, doneChannel chan int){//, findBestElevator chan driver.ButtonMessage ){
 	direction := 0
 	currentFloor := 0
-	queueInit()
+	//queueInit()
 	
 	for{
-	/*println("\t\t\t\tORDERS DOWN ", ordersInDirection[DOWN] ,"\n\n\n")
-	println("\t\t\t\tORDERS UP", ordersInDirection[UP] ,"\n\n\n")
-	println("\t\t\t\tTURN", turn ,"\n\n\n")*/
+		//PrintQueue()
 		select{
 			case newOrder := <- addOrderChannel:
-				addOrder(1, newOrder, currentFloor, direction)
-
-			case <- removeOrderChannel:
-				println("QUEUE: REMOVEORDER")
-				removeOrder(1, currentFloor, direction, &turn)
-				break
 				
-			case movingDirection := <- checkDirectionChannel:
-				direction = movingDirection
-				println("QUEUE: CHECKDIRECTION", direction)
-				/*if(checkIfOrdersInDirection(1, currentFloor, direction, &turn) != -1){
-					setDirectionChannel <- direction
-					break
-				} else{*/
-					newDirection := setDirection(1, currentFloor, direction, &turn)
-					direction = newDirection
-					setDirectionChannel <- newDirection
-					break
-				//}
+				addOrder(1, newOrder, currentFloor, direction, orderInEmptyQueueChannel)
 
+			case <- removeOrderChannel: 
+				println("QUEUE: REMOVEORDER")
+				removeOrder()
+				
+				
+				
 			case floor := <- checkOrdersChannel:
-				println("QUEUE: CHECKORDER", direction)
+				println("QUEUE: CHECKORDER DIRECTION:", direction)
 				currentFloor = floor
-				if(checkOrders(1, currentFloor, direction, &turn)){
-					if(turn){
-						stop <- int(math.Abs(float64(1-direction)))
-					}else{
-						stop <- direction
-					}
-					break
-				} 
+				nextOrderChannel <- checkOrders(1)
 				
 			//case <- findBestElevatorChannel:
 
@@ -99,191 +62,224 @@ func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan in
 	}
 }
 
-func setDirection(elevatorID int, currentFloor int, direction int, turn *bool) int{
-    *turn = false
-	if(ordersInDirection[UP] != 0){
-		if(checkIfOrdersInDirection(elevatorID, currentFloor, UP, turn) != -1){
-			println("VOSS")
-        	return UP
-		} else{
-			println("VOSS DOWN")
-			*turn = true
-			return DOWN
-		}
-    }else if(ordersInDirection[DOWN] != 0){
-		if(checkIfOrdersInDirection(elevatorID, currentFloor, DOWN, turn) != -1){
-
-        	return DOWN
-		}else{
-
-			*turn = true
-			return UP
-		}
-    }
-	println("RETURNERER -1")
-	return -1
+func checkOrders(elevatorID int) int {
+	if queue.head == nil {
+		return -1	
+	}else {
+		return queue.head.value.Floor
+	}
 }
 
-func checkIfOrdersInDirection(elevatorID int, currentFloor int, direction int, turn *bool ) int{
-	orderedFloor := -1
-	//println("DIRECTION: ",direction)
-	/*if(numberInQueue [elevatorID] == 0 || direction == -1){
-			return orderedFloor
-		}*/
-
-	if(*turn){	
-		if(direction == UP){
-			/*if(currentFloor == NumOfFloors-1){
-				return orderedFloor
-			}*/
-			
-			for floor := currentFloor ;floor >= 0; floor--{
-				if(allQueues[elevatorID][floor].UP == 1){
-					orderedFloor = floor
-				}
-			}
-		}else if (direction == DOWN){
-			/*if(currentFloor == 0){
-				return orderedFloor
-			}*/
-			
-			for floor := currentFloor ;floor < NumOfFloors; floor++{
-				if(allQueues[elevatorID][floor].DOWN == 1){
-					orderedFloor = floor
-				}
-			}
-			println("ORDERESFLOOR: ",orderedFloor)
-			return orderedFloor
-		} 
-	} else if (!*turn){
-		if(direction == UP){
-			if(currentFloor == NumOfFloors-1){
-				return orderedFloor
-			}
-			for floor := currentFloor ;floor < NumOfFloors; floor++{
-				if(allQueues[elevatorID][floor].UP == 1){
-					orderedFloor = floor
-				}
-			}
-		} else if (direction == DOWN){
-			if(currentFloor == 0){
-				return orderedFloor
-			}
-			for floor := currentFloor ;floor >= 0; floor--{
-				if(allQueues[elevatorID][floor].DOWN == 1){
-					orderedFloor = floor
-				}
+func addOrder(elevatorID int, order  driver.ButtonMessage, currentFloor int, movingDirection int, orderInEmptyQueueChannel chan int) {
+	var noden = node{order, nil}
+	
+	if (queue.length == 0) {
+		queue.head = &noden
+		queue.last = &noden
+		queue.length = 1
+		orderInEmptyQueueChannel <- 1
+	} else if (queue.length == 1) {
+		if equalOrders(queue.head.value, order) {
+			return
+		} else {
+			queue.length = 2
+			if equalOrders(compareOrders(queue.head.value, order, currentFloor, movingDirection), order) {
+				noden.next = queue.last
+				queue.head = &noden
+			} else {
+				queue.head.next = &noden
+				queue.last = &noden
 			}
 		}
+	} else {
+		var nodePointer = &node{queue.head.value, queue.head.next}
+		if equalOrders(nodePointer.value, order) {
+			return
+		} else if equalOrders(compareOrders(nodePointer.value, order, currentFloor, movingDirection), order) {
+			noden.next = nodePointer
+			queue.head = &noden
+			queue.length++
+			return
+		}
+		for i:=0; i < queue.length-1; i++ {
+			 if equalOrders(nodePointer.next.value, order) {
+			 	return
+			 } else {
+			 	if equalOrders(compareOrders(nodePointer.next.value, order, currentFloor, movingDirection), order) {
+					noden.next = nodePointer.next
+					nodePointer.next = &noden
+					queue.length++
+					return
+				} else {
+					nodePointer = nodePointer.next
+				}
+			 }
+		}
+		queue.last.next = &noden
+		queue.last = &noden
+		queue.length++
 	}
-	println("ORDERESFLOOR: ",orderedFloor)
-	return orderedFloor
 }
 
-func checkOrders(elevatorID int, currentFloor int, direction int, turn *bool) bool{
-	if (direction == UP) {	
-		if(allQueues[elevatorID][currentFloor].UP == 1){
-			//println(allQueues[elevatorID][currentFloor].UP)
-			return true
-		} else if(*turn || checkIfOrdersInDirection(elevatorID, currentFloor, DOWN, turn) == currentFloor){
-			return true
-			
-		}
-	} else if (direction == DOWN) {
-		if(allQueues[elevatorID][currentFloor].DOWN == 1){
-			//println(allQueues[elevatorID][currentFloor].DOWN)
-			return true
-		}else if(*turn || checkIfOrdersInDirection(elevatorID, currentFloor, UP, turn) == currentFloor){
-			return true		
-		}
-	}
-	return false
-}
-
-
-
-func addOrder(elevatorID int, order driver.ButtonMessage, currentFloor int, movingDirection int) {
-	//Antar at vi vet hvilken heis vi skal bruk
-	var directionOfOrder = -1
-	
-	
-	if ( currentFloor - order.Floor > 0 ) {
-        directionOfOrder = DOWN
-    } else if ( currentFloor - order.Floor < 0 ) {
-        directionOfOrder = UP
-    } else if ( currentFloor - order.Floor == 0) {
-		if movingDirection == -1 {
-			directionOfOrder = UP
-		}
-		directionOfOrder = int(math.Abs(float64(1-movingDirection)))
-	}
-	
-	
-    if( order.Button == driver.BUTTON_CALL_UP && allQueues[elevatorID][order.Floor].UP == 0 ) {
-        allQueues[elevatorID][order.Floor].UP = 1
-        numberInQueue[elevatorID] ++
-        ordersInDirection[UP]++
-		println("ORDERED ADDED")
-    } else if( order.Button == driver.BUTTON_CALL_DOWN && allQueues[elevatorID][order.Floor].DOWN==0 ) {
-        allQueues[elevatorID][order.Floor].DOWN = 1
-        numberInQueue[elevatorID] ++
-        ordersInDirection[DOWN] ++
-    } else if(order.Button == driver.BUTTON_COMMAND) {
-    	
-    	if directionOfOrder == UP {
-			if( allQueues[elevatorID][order.Floor].UP == 0){            	
-				numberInQueue[elevatorID] ++
-            	ordersInDirection[directionOfOrder] ++
-            	allQueues[elevatorID][order.Floor].UP = 1
+func compareOrders(oldOrder driver.ButtonMessage, newOrder driver.ButtonMessage, currentFloor int, direction int) driver.ButtonMessage {
+	if newOrder.Button== driver.BUTTON_COMMAND {
+		if newOrder.Floor < currentFloor {
+			//direction DOWN
+			if oldOrder.Floor >  newOrder.Floor {
+				return oldOrder
+			} else if oldOrder.Floor < newOrder.Floor {
+				return newOrder
+			} 
+		} else if newOrder.Floor > currentFloor {
+			//direction UP
+			if oldOrder.Floor <  newOrder.Floor {
+				return oldOrder
+			} else if oldOrder.Floor > newOrder.Floor {
+				return newOrder
+			} else if newOrder.Floor == currentFloor {
+				return oldOrder
 			}	
-		} else if directionOfOrder == DOWN {
-			if( allQueues[elevatorID][order.Floor].DOWN == 0){
-            	numberInQueue[elevatorID] ++
-            	ordersInDirection[directionOfOrder] ++
-            	allQueues[elevatorID][order.Floor].DOWN = 1
-			}
-		}	
-   	}
-	
-}
-	
-func removeOrder(elevatorID int, floor int, movingDirection int, turn *bool) {
-	numberInQueue[elevatorID]--
-	if (movingDirection == UP || (movingDirection == DOWN && *turn)) {
-		allQueues[elevatorID][floor].UP = 0
-		ordersInDirection[UP]--
-		//println("Sletter ordre opp") 
-	}else if (movingDirection == DOWN || (movingDirection == UP && *turn)) {
-		allQueues[elevatorID][floor].DOWN = 0
-		ordersInDirection[DOWN]--
-		//println("Sletter ordre ned")  
-	} //else error 
-}
-	
-
-func findBestElevator(elevatorID int, order driver.ButtonMessage) int{
-	min := 0
-	for elev:= 0; elev < NumOfElevs; elev++{
-			if(numberInQueue [elev] <= min){
-				min = elev
-			}
-	}
-	return min
-}
-
-
-/*func ClearAllExternalOrders(elevatorID int) {
-	numberInQueue [elevatorID] = 0
-	for floor := 0; floor < NumOfFloors; floor++ {
-		if(internalOrders[floor][UP]){
-			numberInQueue [elevatorID]++
 		}
-		if(internalOrders[floor][DOWN]){
-			numberInQueue [elevatorID]++
+	} else if newOrder.Button== driver.BUTTON_CALL_DOWN {
+		if direction == UP {
+			if (oldOrder.Button== driver.BUTTON_CALL_DOWN && oldOrder.Floor < newOrder.Floor){
+				return newOrder
+			} else if (oldOrder.Button!= driver.BUTTON_CALL_DOWN && oldOrder.Floor < currentFloor) {
+				return newOrder
+			} else {
+				return oldOrder
+			}
+		} else if direction == DOWN {
+			if (oldOrder.Button> newOrder.Button) {
+				return oldOrder
+			} else {
+				return newOrder
+			}
+		}
+	} else if newOrder.Button== driver.BUTTON_CALL_UP {
+		if direction == DOWN {
+			if (oldOrder.Button== driver.BUTTON_CALL_UP && oldOrder.Floor > newOrder.Floor) {
+				return newOrder
+			}  else if (oldOrder.Button!= driver.BUTTON_CALL_UP && oldOrder.Floor > currentFloor) {
+				return newOrder
+			} else {
+				return oldOrder
+			}
+		} else if direction == UP {
+			if (oldOrder.Button< newOrder.Button) {
+				return oldOrder
+			} else {
+				return newOrder
+			}
 		}
 	}
-	queue = internalOrders
+	return oldOrder
+}
+
+func equalOrders(oldOrder driver.ButtonMessage, newOrder driver.ButtonMessage) bool {
+	return (oldOrder.Floor == newOrder.Floor && oldOrder.Button== newOrder.Button)
+}
+
+func removeOrder() {
+	nodePointer := queue.head
+	
+	for {
+		if (nodePointer.next != nil) {
+			if (nodePointer.value.Floor == nodePointer.next.value.Floor) {
+			nodePointer = queue.head.next
+			queue.head = nodePointer
+			queue.length--
+			}
+		} else {
+			nodePointer = queue.head.next
+			queue.head = nodePointer
+			queue.length--
+			break
+		}
+	}
+}
+
+func clearAllOrders(){
+	queue.head = nil
+	queue.last = nil
+	queue.length = 0
+}
+
+func PrintQueue() {
+	if queue.length == 0 {
+		return
+	}
+	println("Element 1:\nEtasje: ", queue.head.value.Floor, "\tKnapp: ", queue.head.value.Button,"\n")
+	var noden *node
+	noden = queue.head.next
+	for i:=1 ; i < queue.length; i++ {
+		println("Element", i+1,":\nEtasje: ", noden.value.Floor, "\tKnapp: ", noden.value.Button,"\n")
+		noden = noden.next
+	}
+}
+/*
+func fetchMyQueue() {
+	q := FileHandler.Read(&NumOfElevs, &NumOfFloors)
+	
+	//queue.length = q[0], NEI!!
+	clearAllOrders()
+		
+	for j:=0; j < len(q); j+=2 {
+		ord := driver.ButtonMessage{q[j],q[j+1]}
+		addOrder(elevatorID , ord, currentFloor , movingDirection)
+	}
 }
 */
-
-
+/*
+func recieveExternalQueue() {
+	// newQ := noko---
+	// its direction
+	// its currFloor
+	// its ID
+	// "Lag" ny kø
+	// allQueues[ID] = nyKø 
+	// kun ha ordre i allQueues?
+}
+*/
+/*
+func findBestElevator() int {
+	best = 1
+	min := findElevatorCost(1, newOrder)
+	
+	for elev := 2; elev <= NumOfElevs; elev++ {
+		itsCost := findElevatorCost(elev, newOrder)
+		
+		if min > itsCost {
+			best = elev
+		}
+	} 
+	return best
+}
+*/
+/*
+func findElevatorCost(elevatorID int, newOrder driver.ButtonMessage) int {
+	//for my ID:
+	//		find which position in queue will new order get
+	// Omtrent lik addOrder, bare returnerer pos, uten å legge til i kø
+	return position
+}
+*/
+ /*
+func saveAndSendQueue() {
+	
+	qList = append([]int(nil), queue.head.value.Floor)
+	qList = append(qList, queue.head.value.Button)
+	
+	var noden *node
+	noden = queue.head.next
+	for i:=1 ; i < queue.length; i++ {
+		qList = append(qList, noden.value.Floor)
+		qList = append(qList, noden.value.Button)
+		noden = noden.next
+	}
+	
+	FileHandler.Write(NumElevs, NumOfFloors, qList)
+	//UDP.sendQueue()
+	
+}
+*/
