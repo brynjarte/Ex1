@@ -2,10 +2,10 @@
 package Elevator
 
 import(
-	//"UDP"
+	"UDP"
 	"driver"
 	"Queue"	
-	//"time"
+	"Source"
    	//"fmt"
 )
 
@@ -46,6 +46,11 @@ func Elevator(){
 
 	//UDP
 
+	completedOrderChannel := make(chan Source.Message, 1)
+	externalOrderChannel := make(chan driver.ButtonMessage, 1)
+	UDPaddOrderChannel := make(chan Source.Message, 1)
+	removeExternalOrderChannel := make(chan Source.Message, 1)
+
 	nextOrderedFloor := 100
 	direction := 1
 	currentFloor := 0
@@ -54,8 +59,13 @@ func Elevator(){
 	
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel)
   	go Queue.Queue(addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, orderRemovedChannel)
-   	go handleOrders(addOrderChannel , setButtonLightChannel, newOrderChannel)
+   	go handleOrders(1, addOrderChannel , setButtonLightChannel, newOrderChannel, externalOrderChannel, UDPaddOrderChannel)
 	run <- 1
+	go UDP.Slave(completedOrderChannel, externalOrderChannel, /*elevInfoChannel chan Elevator,*/ UDPaddOrderChannel , removeExternalOrderChannel)
+
+
+
+
 
 	for{
 		select{
@@ -150,18 +160,25 @@ func Elevator(){
 }
 
 
-func handleOrders(addOrderChannel chan driver.ButtonMessage, setButtonLightChannel chan driver.ButtonMessage, newOrderChannel chan driver.ButtonMessage){
+func handleOrders(elevatorID int, addOrderChannel chan driver.ButtonMessage, setButtonLightChannel chan driver.ButtonMessage, newOrderChannel chan driver.ButtonMessage, externalOrderChannel chan driver.ButtonMessage, UDPaddOrderChannel chan Source.Message){
 	for{
-		newOrder := <- newOrderChannel
-		newOrder.Light = 1
-		//if(newInternalOrder.Button == driver.BUTTON_COMMAND){
-			addOrderChannel <- newOrder
-			setButtonLightChannel <- newOrder
-			//println("ORDER ADDED")
-		//} else{
-			//Send til networkchannel
-		//}
+		select{
+			case newOrder := <- newOrderChannel:
+				newOrder.Light = 1
+				if(newOrder.Button == driver.BUTTON_COMMAND){
+					addOrderChannel <- newOrder
+					setButtonLightChannel <- newOrder
+				} else{
+					externalOrderChannel <- newOrder
+					setButtonLightChannel <- newOrder
+				}
+			case newExternalOrder := <- UDPaddOrderChannel:	
+				if(newExternalOrder.MessageTo == elevatorID){				
+					addOrderChanneclear
+l <- newExternalOrder.Button
+				}
+				setButtonLightChannel <- newExternalOrder.Button
+		}
 	}
 }
-
 

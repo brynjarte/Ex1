@@ -27,7 +27,7 @@ type linkedList struct{
 
 var queue = linkedList{nil,nil,0}
 var qList [] int
-var kuk int = 0
+
 /*
 func init(){
 	//var queue = linkedList{nil,nil,0} 
@@ -84,8 +84,7 @@ func checkOrders(elevatorID int) int {
 }
 
 func addOrder(elevatorID int, order driver.ButtonMessage, currentFloor int, movingDirection int, orderInEmptyQueue chan int) {
-	println(kuk)
-	kuk++
+
 	var newOrder = node{order, nil}
 	
 	if (queue.length == 0) {

@@ -5,10 +5,11 @@ import(
 	"encoding/json"
 	"time"
 	"driver"
+    "Source"
 	//"fmt"
 )
 
-type Message struct{
+/*type Message struct{
 	NewOrder bool
 	FromMaster bool
 	CompletedOrder bool
@@ -24,16 +25,16 @@ type Elevator struct {
 	CurrentFloor int
 	Direction int
 	//numberInQueue int
-}
+}*/
 
 
 
-func recieveUdpMessage(responseChannel chan Message){
+func recieveUdpMessage(responseChannel chan Source.Message){
 	
 	buffer := make([]byte,1024)
 	raddr,_ := net.ResolveUDPAddr("udp", ":26969")
 	recievesock,_ := net.ListenUDP("udp", raddr)
-	var recMsg Message
+	var recMsg Source.Message
 	for {
 		mlen , _,_ := recievesock.ReadFromUDP(buffer)
 		json.Unmarshal(buffer[:mlen], &recMsg)
@@ -41,7 +42,7 @@ func recieveUdpMessage(responseChannel chan Message){
 	}
 }
 
-func sendUdpMessage(msg Message){
+func sendUdpMessage(msg Source.Message){
 
 	baddr,err := net.ResolveUDPAddr("udp", "129.241.187.255:26969")
 	sendSock, err := net.DialUDP("udp", nil ,baddr) // connection
@@ -54,87 +55,99 @@ func sendUdpMessage(msg Message){
 	
 }
 
-func Slave(CompletedOrderChannel chan Message, externalOrderChannel chan driver.ButtonMessage, ElevInfoChannel chan Elevator, AddOrderChannel chan Message, RemoveOrderChannel chan Message){
-	
-	ResponseChannel := make(chan Message,1)
- 	var elevator = Elevator{2,0,0}
-	go recieveUdpMessage(ResponseChannel)
+func Slave(completedOrderChannel chan Source.Message, externalOrderChannel chan driver.ButtonMessage, /*elevInfoChannel chan Elevator,*/ addOrderChannel chan Source.Message, removeExternalOrderChannel chan Source.Message){
+	println("Starter SALVE")
+	responseChannel := make(chan Source.Message,1)
+	checkIdChannel := make(chan int, 1)
+ 	var elevator = Source.Elevator{2,0,0}
+	go recieveUdpMessage(responseChannel)
     	
 	for{
 		select{
 	
-			case message := <-ResponseChannel:
-				
+			case message := <-responseChannel:
+				println("Message <- respChan")
 				if (message.FromMaster || message.CompletedOrder) && !(message.ElevInfo.ID == elevator.ID) {
-					if message.NewOrder{
-						if message.MessageTo == elevator.ID{
-							AddOrderChannel <- message
-							sendUdpMessage(Message{false, false, false, false, -1, elevator, message.Button})
+					if (message.NewOrder) {
+                        addOrderChannel <- message
+						if (message.MessageTo == elevator.ID) {
+							sendUdpMessage(Source.Message{false, false, false, false, -1, elevator, message.Button})
 						}
 					}else if message.CompletedOrder {
-						RemoveOrderChannel <- message
+						removeExternalOrderChannel <- message
 					} 
 				}
         
 			case newOrder := <-externalOrderChannel:
+				println("newOrder <- extOrdChan")
 				for i := 0; i < 4; i++ {
-					sendUdpMessage(Message{true, false, false, false, -1, elevator, newOrder})
+					sendUdpMessage(Source.Message{true, false, false, false, -1, elevator, newOrder})
 					
 					select {
-						case reply := <-ResponseChannel:
-							i = 4
-							ResponseChannel <- reply 
-							break 
-						case <-time.After(200*time.Millisecond):
-							if (i < 3) {						
-								break
-							} else {
-								msg := Message{true, false, false, false, elevator.ID, elevator, newOrder}
-								AddOrderChannel <- msg
-								go master(CompletedOrderChannel, externalOrderChannel, ElevInfoChannel, AddOrderChannel, RemoveOrderChannel, ResponseChannel)
-								return
+						case reply := <-responseChannel:
+							if !(reply.ElevInfo.ID == elevator.ID) {
+								checkIdChannel <- 1
+							}
+							select {
+								case  <- checkIdChannel:
+									println("Feil ID")
+									i = 4
+									responseChannel <- reply 
+									break
+							
+
+								case <-time.After(200*time.Millisecond):
+									println("time.After()")
+									if (i < 3) {						
+										break
+									} else {
+										msg := Source.Message{true, false, false, false, elevator.ID, elevator, newOrder}
+										addOrderChannel <- msg
+										go master(completedOrderChannel, externalOrderChannel, /*elevInfoChannel, */addOrderChannel, removeExternalOrderChannel, responseChannel)
+										return
+									}
 							}
 					}
 				}
 
-			case completedOrder := <-CompletedOrderChannel:
+			/*case completedOrder := <-completedOrderChannel:
 				for i := 0; i < 4; i++ {
 					sendUdpMessage(Message{false, false, true, false, -1, elevator, completedOrder.Button}) // FJERNER ORDREN EIN ANNA PLASS?
 					select {
-						case reply := <-ResponseChannel:
+						case reply := <-responseChannel:
 							i = 4
-							ResponseChannel <- reply 
+							responseChannel <- reply 
 							break 
 						case <-time.After(200*time.Millisecond):
 							if (i < 3) {						
 								break
 							} else {
-								go master(CompletedOrderChannel, externalOrderChannel, ElevInfoChannel, AddOrderChannel, RemoveOrderChannel, ResponseChannel)
+								go master(completedOrderChannel, externalOrderChannel, elevInfoChannel, addOrderChannel, removeOrderChannel, responseChannel)
 								return
 							}
 					}
 				}
 				
 			//Skifter retn. el. etg.: 
-			case elevatorInfo := <- ElevInfoChannel:
-				sendUdpMessage(Message{false, false, false, true, -1, elevatorInfo, driver.ButtonMessage{0,0,0}})
+			case elevatorInfo := <- elevInfoChannel:
+				sendUdpMessage(Message{false, false, false, true, -1, elevatorInfo, driver.ButtonMessage{0,0,0}})*/
 		}
 	}
 }
 
 
-func master(CompletedOrderChannel chan Message, ExternalOrderChannel chan driver.ButtonMessage, ElevInfoChannel chan Elevator, AddOrderChannel chan Message, RemoveOrderChannel chan Message, ResponseChannel chan Message){
-
-	var elevator = Elevator{2,0,0}
+func master(completedOrderChannel chan Source.Message, externalOrderChannel chan driver.ButtonMessage,/* elevInfoChannel chan Elevator,*/ addOrderChannel chan Source.Message, removeExternalOrderChannel chan Source.Message, responseChannel chan Source.Message){
+	println("Starter MASTAH")
+	var elevator = Source.Elevator{2,0,0}
 
 	for {
         select{
 
 
-			case message:= <-ResponseChannel:
+			case message:= <-responseChannel:
 				if message.FromMaster{
 					if(message.ElevInfo.ID < elevator.ID){
-						go Slave(CompletedOrderChannel, ExternalOrderChannel, ElevInfoChannel, AddOrderChannel, RemoveOrderChannel)	
+						go Slave(completedOrderChannel, externalOrderChannel, /*elevInfoChannel,*/ addOrderChannel, removeExternalOrderChannel)	
 						return
 					}
 				}
@@ -143,28 +156,28 @@ func master(CompletedOrderChannel chan Message, ExternalOrderChannel chan driver
 					break
 				}
 		        if message.NewOrder{
-	              	ExternalOrderChannel <- message.Button
+	              	externalOrderChannel <- message.Button
 		        }else if message.CompletedOrder {
-					RemoveOrderChannel <- message
-				}else{
-	        		ElevInfoChannel <- message.ElevInfo
-				}                
+					removeExternalOrderChannel <- message
+				}/*else{
+	        		elevInfoChannel <- message.ElevInfo
+				}       */         
 	                
-		    case newOrder := <-ExternalOrderChannel:
+		    case newOrder := <-externalOrderChannel:
 	        	// SEND PÅ EIN KANAL ELLER GJER SÅNN : calculatedElev := Queue.CalculateCost(message.Button) // RETURNS kva heis som tar ordren
-				calculatedElev := 2
-				msg := Message{true, true, false, false, calculatedElev, elevator, newOrder}
+				calculatedElev := 1
+				msg := Source.Message{true, true, false, false, calculatedElev, elevator, newOrder}
 		        sendUdpMessage(msg)
  
 				for{
 					if(elevator.ID == calculatedElev){
-						AddOrderChannel <- msg       //LEGGER TIL I KØ OG SETTER LYS
+						addOrderChannel <- msg       //LEGGER TIL I KØ OG SETTER LYS
 						break                                                    
 					}
 					select {
-						case reply := <-ResponseChannel:
+						case reply := <-responseChannel:
 							if(reply.ElevInfo.ID == calculatedElev){
-								AddOrderChannel <- msg
+								addOrderChannel <- msg
 								break
 													} 
 						case <-time.After(200*time.Millisecond):
@@ -173,14 +186,14 @@ func master(CompletedOrderChannel chan Message, ExternalOrderChannel chan driver
 							//calculatedElev := Queue.CalculateCost(message.Button) // RETURNS kva heis som tar ordren
 							// HEIS UTE AV NETTVERK, KVA GJER ME MED BESTILLINGAR????
 							calculatedElev := 2
-							sendUdpMessage(Message{true, true, false, false, calculatedElev, elevator, newOrder})
+							sendUdpMessage(Source.Message{true, true, false, false, calculatedElev, elevator, newOrder})
 					}
 				}
 
-			case completedOrder := <-CompletedOrderChannel:
-				sendUdpMessage(Message{false, true, true, false, -1, elevator, completedOrder.Button}) // FJERNER ORDREN EIN ANNA PLASS?
+			/*case completedOrder := <-completedOrderChannel:
+				sendUdpMessage(Message{false, true, true, false, -1, elevator, completedOrder.Button}) // FJERNER ORDREN EIN ANNA PLASS?*/
 
-			//case elevInfo := <-ElevInfoChannel:
+			//case elevInfo := <-elevInfoChannel:
 				//OPPDATER INFO OM HEISAR.
 //				break
 
