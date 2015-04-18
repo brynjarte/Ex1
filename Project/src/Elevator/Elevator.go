@@ -63,7 +63,7 @@ func Elevator(){
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel)
   	go Queue.Queue(addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, orderRemovedChannel, newElevInfoChannel, fromUdpToQueue)
    	go handleOrders(2, addOrderChannel , setButtonLightChannel, newOrderChannel, externalOrderChannel, UDPaddOrderChannel)
-	
+	//SKAL FROMUDPTOQUEUE tAKAST INN I SLAVE???????????????????????????
 	go UDP.Slave(completedOrderChannel, externalOrderChannel, updateElevatorInfoChannel, UDPaddOrderChannel , removeExternalOrderChannel, newElevInfoChannel, fromUdpToQueue)
 
 	run <- 1
@@ -179,7 +179,7 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 					setButtonLightChannel <- newOrder
 				}
 			case newExternalOrder := <- UDPaddOrderChannel:	
-				fromUdpToQueue <- newExternalOrder 
+				fromUdpToQueue <- newExternalOrder  
 				if(newExternalOrder.CompletedOrder && elevatorID != newExternalOrder.MessageTo){
 					newExternalOrder.Button.Light = 0
 					setButtonLightChannel <- newExternalOrder.Button
