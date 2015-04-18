@@ -1,23 +1,26 @@
 package Source
 
-import "driver"
-
-/*
+const (
+	BUTTON_CALL_UP = 0
+	BUTTON_CALL_DOWN = 1
+	BUTTON_COMMAND = 2
+)
 type ButtonMessage struct {
 	Floor int
 	Button int
 	Light int
-}*/
+}
 
 type Message struct{
 	NewOrder bool
 	FromMaster bool
 	CompletedOrder bool
 	UpdatedElevInfo bool
+	MessageFrom int
 	MessageTo int
 
 	ElevInfo Elevator
-	Button driver.ButtonMessage
+	Button ButtonMessage
 }
 
 type Elevator struct {

@@ -3,6 +3,7 @@ package driver
 import (
     "math"
     "time"
+	"Source"
 )
 
 const (
@@ -12,10 +13,6 @@ const (
 
 	N_FLOORS = 4 // MÅ ENKELT KUNNA ENDRAST
 	N_BUTTONS = 3 
-
-	BUTTON_CALL_UP = 0
-	BUTTON_CALL_DOWN = 1
-	BUTTON_COMMAND = 2
 
 	ERROR = 20132
 )
@@ -35,12 +32,6 @@ var button_channel_matrix = [N_FLOORS][N_BUTTONS] int {
 	{BUTTON_UP4, BUTTON_DOWN4, BUTTON_COMMAND4},
 }
 
-type ButtonMessage struct {
-	Floor int
-	Button int
-	Light int
-}	
-
 func elev_init(sensorChannel chan int) int{
 
 	if (io_init() == 0) {
@@ -49,13 +40,13 @@ func elev_init(sensorChannel chan int) int{
 	
 	for i := 0; i < N_FLOORS; i++ {
 		if i != 0 {
-			elev_set_button_lamp(ButtonMessage{i,BUTTON_CALL_DOWN, 0})
+			elev_set_button_lamp(Source.ButtonMessage{i,Source.BUTTON_CALL_DOWN, 0})
 		}
 		if i != (N_FLOORS - 1) {
-			elev_set_button_lamp(ButtonMessage{i,BUTTON_CALL_UP, 0})
+			elev_set_button_lamp(Source.ButtonMessage{i,Source.BUTTON_CALL_UP, 0})
 		}
 
-		elev_set_button_lamp(ButtonMessage{i,BUTTON_COMMAND, 0})
+		elev_set_button_lamp(Source.ButtonMessage{i,Source.BUTTON_COMMAND, 0})
 	}
 
 	elev_set_door_open_lamp(0)
@@ -154,7 +145,7 @@ func elev_set_floor_indicator(floor int) int {
 }
 
 
-func elev_set_button_lamp(buttonPushed ButtonMessage) int{
+func elev_set_button_lamp(buttonPushed Source.ButtonMessage) int{
 
 	if(buttonPushed.Floor < 0){
 		return ERROR
@@ -162,13 +153,13 @@ func elev_set_button_lamp(buttonPushed ButtonMessage) int{
 	if(buttonPushed.Floor >= N_FLOORS){
 		return ERROR
 	}
-	if((buttonPushed.Button == BUTTON_CALL_UP) && (buttonPushed.Floor == N_FLOORS -1)){
+	if((buttonPushed.Button == Source.BUTTON_CALL_UP) && (buttonPushed.Floor == N_FLOORS -1)){
 		return ERROR
 	}
-	if((buttonPushed.Button == BUTTON_CALL_DOWN) && (buttonPushed.Floor == 0)){
+	if((buttonPushed.Button == Source.BUTTON_CALL_DOWN) && (buttonPushed.Floor == 0)){
 		return ERROR
 	}
-	if((buttonPushed.Button != BUTTON_CALL_UP) && (buttonPushed.Button != BUTTON_CALL_DOWN) && (buttonPushed.Button != BUTTON_COMMAND)){
+	if((buttonPushed.Button != Source.BUTTON_CALL_UP) && (buttonPushed.Button != Source.BUTTON_CALL_DOWN) && (buttonPushed.Button != Source.BUTTON_COMMAND)){
 		return ERROR
 	}
 
@@ -190,13 +181,13 @@ func elev_get_button_signal(button int, floor int) int{
 	if(floor >= N_FLOORS){
 		return ERROR
 	}
-	if((button == BUTTON_CALL_UP) && (floor == N_FLOORS -1)){
+	if((button == Source.BUTTON_CALL_UP) && (floor == N_FLOORS -1)){
 		return ERROR
 	}
-	if((button == BUTTON_CALL_DOWN) && (floor == 0)){
+	if((button == Source.BUTTON_CALL_DOWN) && (floor == 0)){
 		return ERROR
 	}
-	if((button != BUTTON_CALL_UP) && (button != BUTTON_CALL_DOWN) && (button != BUTTON_COMMAND)){
+	if((button != Source.BUTTON_CALL_UP) && (button != Source.BUTTON_CALL_DOWN) && (button != Source.BUTTON_COMMAND)){
 		return ERROR
 	}
 
@@ -207,30 +198,30 @@ func elev_get_button_signal(button int, floor int) int{
 	}
 }
 
-func readButtons(NewOrderChannel chan ButtonMessage) {
-	var buttonPressed ButtonMessage
-	var lastButtonPressed ButtonMessage
+func readButtons(NewOrderChannel chan Source.ButtonMessage) {
+	var buttonPressed Source.ButtonMessage
+	var lastButtonPressed Source.ButtonMessage
 	for{   
 		time.Sleep(50*time.Millisecond) 	
 		buttonPressed.Floor = -1
 		for  i := 0; i < 3; i++  {
    
-			if ( elev_get_button_signal( BUTTON_CALL_UP, i ) == 1) {
+			if ( elev_get_button_signal( Source.BUTTON_CALL_UP, i ) == 1) {
 				buttonPressed.Floor =  i
-				buttonPressed.Button = BUTTON_CALL_UP	
-			} else if ( elev_get_button_signal( BUTTON_CALL_DOWN, i+1 ) == 1) {
+				buttonPressed.Button = Source.BUTTON_CALL_UP	
+			} else if ( elev_get_button_signal( Source.BUTTON_CALL_DOWN, i+1 ) == 1) {
 				buttonPressed.Floor =  i+1
-				buttonPressed.Button = BUTTON_CALL_DOWN
+				buttonPressed.Button = Source.BUTTON_CALL_DOWN
 			} 
 		} 
     
 		for i := 0; i < 4; i++ {
         
-			if ( elev_get_button_signal( BUTTON_COMMAND, i ) == 1 ) {
-				for ; elev_get_button_signal( BUTTON_COMMAND, i ) == 1 ; {
+			if ( elev_get_button_signal( Source.BUTTON_COMMAND, i ) == 1 ) {
+				for ; elev_get_button_signal( Source.BUTTON_COMMAND, i ) == 1 ; {
 				}
 				buttonPressed.Floor =  i
-				buttonPressed.Button = BUTTON_COMMAND
+				buttonPressed.Button = Source.BUTTON_COMMAND
 			}
 		}
 	
@@ -267,10 +258,10 @@ func readSensors(sensorChannel chan int){
 func clearExternalLights() {
 		for i := 0; i < N_FLOORS; i++ {
 			if i != 0 {
-				elev_set_button_lamp(ButtonMessage{i, BUTTON_CALL_DOWN, 0})
+				elev_set_button_lamp(Source.ButtonMessage{i, Source.BUTTON_CALL_DOWN, 0})
 			}
 			if i != (N_FLOORS - 1) {
-				elev_set_button_lamp(ButtonMessage{i, BUTTON_CALL_UP, 0})
+				elev_set_button_lamp(Source.ButtonMessage{i, Source.BUTTON_CALL_UP, 0})
 			}
 		}
 }
@@ -279,12 +270,12 @@ func setExternalLights(externalOrders [][] bool, elevatorID int) {
 		for floor := 0; floor < N_FLOORS; floor++ {
 			if floor != 0 {
 				if (externalOrders[floor][1+2*elevatorID]) {
-					elev_set_button_lamp(ButtonMessage{floor, BUTTON_CALL_DOWN, 1})
+					elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_DOWN, 1})
 				}
 			}
 			if floor != (N_FLOORS - 1) {
 				if (externalOrders[floor][2*elevatorID]) {
-					elev_set_button_lamp(ButtonMessage{floor, BUTTON_CALL_UP, 1})
+					elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_UP, 1})
 				}
 			}
 		}
@@ -296,12 +287,12 @@ func stop(currentFloor int, direction int, stoppedChannel chan int){
 	elev_set_speed(0)
 	elev_set_door_open_lamp(1)
 
-	elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_COMMAND, 0})
+	elev_set_button_lamp(Source.ButtonMessage{currentFloor, Source.BUTTON_COMMAND, 0})
 	if(direction == 0 || currentFloor == 0){
-		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_UP, 0})
+		elev_set_button_lamp(Source.ButtonMessage{currentFloor, Source.BUTTON_CALL_UP, 0})
 	}
 	if (direction == 1 || currentFloor == 3){
-		elev_set_button_lamp(ButtonMessage{currentFloor, BUTTON_CALL_DOWN, 0})
+		elev_set_button_lamp(Source.ButtonMessage{currentFloor, Source.BUTTON_CALL_DOWN, 0})
 	}
 	//println("SLEEEPING")	
 
@@ -323,7 +314,7 @@ func closeDoor(stoppedChannel chan int){
 
 }
 
-func Drivers(newOrderChannel chan ButtonMessage, floorReachedChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int,setButtonLightChannel chan ButtonMessage){
+func Drivers(newOrderChannel chan Source.ButtonMessage, floorReachedChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int,setButtonLightChannel chan Source.ButtonMessage){
 
 	sensorChannel := make(chan int, 1)
 	go readButtons(newOrderChannel)

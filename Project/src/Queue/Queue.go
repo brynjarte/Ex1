@@ -1,7 +1,8 @@
 package Queue
 
 import (
-	"driver"
+	"Source"
+	//"driver"
 	//"os"
 	//"os/exec"
 )
@@ -12,8 +13,9 @@ const (
 	DOWN = 1
 )
 
+
 type node struct{
-	value driver.ButtonMessage
+	value Source.ButtonMessage
 	next *node
 }
 
@@ -23,7 +25,9 @@ type linkedList struct{
 	length int
 }
 
-//var allQueues map[int]linkedList
+var allExternalQueues  = make(map[int] [][]int)
+var allElevatorsInfo = make(map[int] Source.Elevator)
+
 
 var queue = linkedList{nil,nil,0}
 var qList [] int
@@ -36,10 +40,10 @@ func init(){
 }*/
 
 
-func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan int, nextOrderChannel chan int, checkOrdersChannel chan int, orderInEmptyQueue chan int, orderRemovedChannel chan int){//, findBestElevator chan driver.ButtonMessage ){
+func Queue(addOrderChannel chan Source.ButtonMessage, removeOrderChannel chan int, nextOrderChannel chan int, checkOrdersChannel chan int, orderInEmptyQueue chan int, orderRemovedChannel chan int, newElevInfoChannel chan Source.Elevator, fromUdpToQueue chan Source.Messagee){//, findBestElevator chan Source.ButtonMessage ){
 	direction := -1
 	currentFloor := 0
-
+	elevatorID := 2
 	//queueInit()
 	
 	for{
@@ -51,11 +55,16 @@ func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan in
 		*/
 		select{
 			case newOrder := <- addOrderChannel:
-				go addOrder(1, newOrder, currentFloor, direction, orderInEmptyQueue)
+				go addOrder(elevatorID, newOrder, currentFloor, direction, orderInEmptyQueue)
+			
+			
+				
+				
 
 			case <- removeOrderChannel: 
 				//println("QUEUE: REMOVEORDER")
 				go removeOrder(orderRemovedChannel)
+			
 				
 			case floor := <- checkOrdersChannel:
 				
@@ -69,6 +78,20 @@ func Queue(addOrderChannel chan driver.ButtonMessage, removeOrderChannel chan in
 				}else{
 					direction = DOWN
 				}
+
+			case newUpdate := <- fromUdpToQueue:
+				if(!newUpdate.FromMaster){				
+					if(newUpdate.NewOrder && newUpdate.MessageTo == elevatorID){
+						addOrderChannel <- newUpdate.Button
+						//go recieveExternalQueue(newUpdate.MessageTo, newUpdate.Button)
+					} else if( newUpdate.CompletedOrder && newUpdate.MessageTo != elevatorID){
+						go recieveExternalQueue(newUpdate.MessageTo, newUpdate.Button)
+					} else if (newUpdate.UpdatedElevInfo){
+						go updateElevInfo(newUpdate.ElevInfo)
+					} // FORTSETT MED SLAVE
+					
+						
+				
 			//case <- findBestElevatorChannel:
 
 		}
@@ -83,7 +106,7 @@ func checkOrders(elevatorID int) int {
 	}
 }
 
-func addOrder(elevatorID int, order driver.ButtonMessage, currentFloor int, movingDirection int, orderInEmptyQueue chan int) {
+func addOrder(elevatorID int, order Source.ButtonMessage, currentFloor int, movingDirection int, orderInEmptyQueue chan int) {
 
 	var newOrder = node{order, nil}
 	
@@ -138,9 +161,9 @@ func addOrder(elevatorID int, order driver.ButtonMessage, currentFloor int, movi
 	}
 }
 
-func compareOrders(oldOrder driver.ButtonMessage, newOrder driver.ButtonMessage, currentFloor int, direction int) driver.ButtonMessage {
-	println("Button new:", newOrder.Button, "\nFlooor neu:", newOrder.Floor, "Direccion:", direction)
-	if newOrder.Button == driver.BUTTON_COMMAND {
+func compareOrders(oldOrder Source.ButtonMessage, newOrder Source.ButtonMessage, currentFloor int, direction int) Source.ButtonMessage {
+	
+	if newOrder.Button == Source.BUTTON_COMMAND {
 		if newOrder.Floor < currentFloor {
 			//direction DOWN
 			if oldOrder.Floor >  newOrder.Floor {
@@ -158,11 +181,11 @@ func compareOrders(oldOrder driver.ButtonMessage, newOrder driver.ButtonMessage,
 				return oldOrder
 			}	
 		}
-	} else if newOrder.Button == driver.BUTTON_CALL_DOWN {
+	} else if newOrder.Button == Source.BUTTON_CALL_DOWN {
 		if direction == UP {
-			if (oldOrder.Button == driver.BUTTON_CALL_DOWN && oldOrder.Floor < newOrder.Floor){
+			if (oldOrder.Button == Source.BUTTON_CALL_DOWN && oldOrder.Floor < newOrder.Floor){
 				return newOrder
-			} else if (oldOrder.Button != driver.BUTTON_CALL_DOWN && oldOrder.Floor < currentFloor) {
+			} else if (oldOrder.Button != Source.BUTTON_CALL_DOWN && oldOrder.Floor < currentFloor) {
 				return newOrder
 			} else {
 				return oldOrder
@@ -174,12 +197,12 @@ func compareOrders(oldOrder driver.ButtonMessage, newOrder driver.ButtonMessage,
 				return newOrder
 			}
 		}
-	} else if newOrder.Button== driver.BUTTON_CALL_UP {
+	} else if newOrder.Button== Source.BUTTON_CALL_UP {
 		if direction == DOWN {
-			if (oldOrder.Button== driver.BUTTON_CALL_UP && oldOrder.Floor > newOrder.Floor) {
+			if (oldOrder.Button== Source.BUTTON_CALL_UP && oldOrder.Floor > newOrder.Floor) {
 				println("if")
 				return newOrder
-			}  else if (oldOrder.Button != driver.BUTTON_CALL_UP && oldOrder.Floor > currentFloor) {
+			}  else if (oldOrder.Button != Source.BUTTON_CALL_UP && oldOrder.Floor > currentFloor) {
 				println("elseif")				
 				return newOrder
 			} else {
@@ -197,7 +220,7 @@ func compareOrders(oldOrder driver.ButtonMessage, newOrder driver.ButtonMessage,
 	return oldOrder
 }
 
-func equalOrders(oldOrder driver.ButtonMessage, newOrder driver.ButtonMessage) bool {
+func equalOrders(oldOrder Source.ButtonMessage, newOrder Source.ButtonMessage) bool {
 	return (oldOrder.Floor == newOrder.Floor && oldOrder.Button== newOrder.Button)
 }
 
@@ -251,22 +274,21 @@ func fetchMyQueue() {
 	clearAllOrders()
 		
 	for j:=0; j < len(q); j+=2 {
-		ord := driver.ButtonMessage{q[j],q[j+1]}
+		ord := Source.ButtonMessage{q[j],q[j+1]}
 		addOrder(elevatorID , ord, currentFloor , movingDirection)
 	}
 }
 */
-/*
-func recieveExternalQueue() {
-	// newQ := noko---
-	// its direction
-	// its currFloor
-	// its ID
-	// "Lag" ny kø
-	// allQueues[ID] = nyKø 
-	// kun ha ordre i allQueues?
+
+func recieveExternalQueue(elevatorID int, button Source.ButtonMessage) {
+		
+	allExternalQueues[elevatorID][button.Floor][button.Button] = button.Light
+	
 }
-*/
+
+func updateElevInfo(newElevInfo Source.Elevator){
+	allElevatorsInfo[newElevInfo.ID] = newElevInfo
+}
 /*
 func findBestElevator() int {
 	best = 1
@@ -283,7 +305,7 @@ func findBestElevator() int {
 }
 */
 /*
-func findElevatorCost(elevatorID int, newOrder driver.ButtonMessage) int {
+func findElevatorCost(elevatorID int, newOrder Source.ButtonMessage) int {
 	//for my ID:
 	//		find which position in queue will new order get
 	// Omtrent lik addOrder, bare returnerer pos, uten å legge til i kø
