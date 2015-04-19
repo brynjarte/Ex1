@@ -296,8 +296,9 @@ func stop(currentFloor int, direction int, stoppedChannel chan int){
 	}
 	//println("SLEEEPING")	
 
-	//time.Sleep(3*time.Second)
-	//println("DONE SLEEEPING")
+	//FORSLAGcloseDOooR()
+	// resetDoorChannel <- 1
+		
 	<- time.After(3*time.Second)
 	elev_set_door_open_lamp(0)
 	stoppedChannel <- 1
@@ -305,11 +306,16 @@ func stop(currentFloor int, direction int, stoppedChannel chan int){
 
 }
 
-func closeDoor(stoppedChannel chan int){
-	<- time.After(3*time.Second)
-	elev_set_door_open_lamp(0)
-	stoppedChannel <- 1
-	//println("DONE SLEEEPING")
+func closeDoor(stoppedChannel chan int, resetDoorChannel chan int){
+	
+	for
+		select{
+			case <- time.After(3*time.Second):
+				elev_set_door_open_lamp(0)
+				stoppedChannel <- 1
+				<- resetDoorChannel
+			case <- resetDoorChannel:
+				//Reset door timer
 	return
 
 }
