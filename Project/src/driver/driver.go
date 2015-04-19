@@ -163,7 +163,7 @@ func elev_set_button_lamp(buttonPushed Source.ButtonMessage) int{
 		return ERROR
 	}
 
-	if(buttonPushed.Light != 0){
+	if(buttonPushed.Value != 0){
 		io_set_bit(lamp_channel_matrix[buttonPushed.Floor][buttonPushed.Button])
 	} else {
 		io_clear_bit(lamp_channel_matrix[buttonPushed.Floor][buttonPushed.Button])
