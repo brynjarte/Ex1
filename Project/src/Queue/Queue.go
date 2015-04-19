@@ -282,7 +282,7 @@ func fetchMyQueue() {
 
 func recieveExternalQueue(elevatorID int, button Source.ButtonMessage) {
 		
-	allExternalQueues[elevatorID][button.Floor][button.Button] = button.Light
+	allExternalQueues[elevatorID][button.Floor][button.Button] = button.Value
 	
 }
 
