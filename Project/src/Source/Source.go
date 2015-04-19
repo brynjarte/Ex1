@@ -8,7 +8,7 @@ const (
 type ButtonMessage struct {
 	Floor int
 	Button int
-	Light int
+	Value int
 }
 
 type Message struct{
