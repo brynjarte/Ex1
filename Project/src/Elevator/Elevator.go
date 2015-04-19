@@ -170,7 +170,7 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 	for{
 		select{
 			case newOrder := <- newOrderChannel:
-				newOrder.Light = 1
+				newOrder.Value = 1
 				if(newOrder.Button == Source.BUTTON_COMMAND){
 					addOrderChannel <- newOrder
 					setButtonLightChannel <- newOrder
@@ -181,10 +181,10 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 			case newExternalOrder := <- UDPaddOrderChannel:	
 				fromUdpToQueue <- newExternalOrder  
 				if(newExternalOrder.CompletedOrder && elevatorID != newExternalOrder.MessageTo){
-					newExternalOrder.Button.Light = 0
+					newExternalOrder.Button.Value = 0
 					setButtonLightChannel <- newExternalOrder.Button
 				} else if(newExternalOrder.NewOrder){
-				 	newExternalOrder.Button.Light = 1
+				 	newExternalOrder.Button.Value = 1
 					setButtonLightChannel <- newExternalOrder.Button
 				}
 	
