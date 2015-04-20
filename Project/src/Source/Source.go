@@ -34,3 +34,7 @@ type Elevator struct {
 	Direction int
 	//numberInQueue int
 }
+
+func sourceInit() {
+	FileHandler.Read(&NumOfFloors, &NumOfElevs)	
+}
