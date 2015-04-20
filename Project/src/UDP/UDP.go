@@ -198,6 +198,7 @@ func master( externalOrderChannel chan Source.ButtonMessage, updateElevatorInfoC
 								if(reply.MessageFrom == distributedOrder.MessageTo && reply.AcceptedOrder){
 									reply.FromMaster = true
 									sendUdpMessage(reply)
+									<- messageFromMasterChannel
 									handleOrderChannel <- reply
 									break ack
 								} else{
