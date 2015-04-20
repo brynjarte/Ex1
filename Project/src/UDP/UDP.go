@@ -182,20 +182,22 @@ func master( externalOrderChannel chan Source.ButtonMessage, updateElevatorInfoC
 				handleOrderChannel <- newOrderMessage
 				println("New Order ")
 		        
-			case distributeOrder := <- bestElevatorChannel:
-				println("distributeOrder", distributeOrder.MessageTo)
-				if( distributeOrder.MessageTo == elevator.ID){
+			case distributedOrder := <- bestElevatorChannel:
+				println("distributeOrder", distributedOrder.MessageTo)
+				if( distributedOrder.MessageTo == elevator.ID){
 					break
 				}
-				sendUdpMessage(distributeOrder)
-				println("distributeOrder", distributeOrder.MessageTo)
+				sendUdpMessage(distributedOrder)
+				println("distributeOrder", distributedOrder.MessageTo)
 				 <- messageFromMasterChannel
-				if(elevator.ID != distributeOrder.MessageTo){				
+				if(elevator.ID != distributedOrder.MessageTo){				
 					ack:
 					for{
 						select {
 							case reply := <- messageFromSlaveChannel:
-								if(reply.MessageFrom == distributeOrder.MessageTo && reply.AcceptedOrder){
+								if(reply.MessageFrom == distributedOrder.MessageTo && reply.AcceptedOrder){
+									reply.FromMaster = true
+									sendUdpMessage(reply)
 									handleOrderChannel <- reply
 									break ack
 								} else{
@@ -205,8 +207,8 @@ func master( externalOrderChannel chan Source.ButtonMessage, updateElevatorInfoC
 							case <-time.After(200*time.Millisecond):
 								// NO ACK.
 								println("No ACK")
-								removeElevator <- distributeOrder.MessageTo
-								distributeOrder.FromMaster = false
+								removeElevator <- distributedOrder.MessageTo
+								distributedOrder.FromMaster = false
 								//handleOrderChannel <- distributeOrder
 								break ack
 
