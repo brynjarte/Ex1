@@ -40,5 +40,5 @@ type Elevator struct {
 }
 
 func SourceInit() {
-	FileHandler.Read(&NumOfFloors, &NumOfElevs)	
+	FileHandler.Read(&NumOfElevs, &NumOfFloors)	
 }
