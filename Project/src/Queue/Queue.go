@@ -4,7 +4,7 @@ import (
 	"Source"
 	"math"
 	"time"
-	//"os/exec"
+	"FileHandler"
 )
 
 
@@ -48,12 +48,6 @@ func Queue(elevator Source.Elevator, addOrderChannel chan Source.ButtonMessage, 
 	queueInit(elevator)
 
 	for{
-		/*
-		c := exec.Command("clear")
-		c.Stdout = os.Stdout
-		c.Run()
-		PrintQueue()
-		*/
 		select{
 			case newOrder := <- addOrderChannel:
 				go addOrder(elevator.ID, newOrder, elevator.CurrentFloor, elevator.Direction, orderInEmptyQueue)
@@ -143,6 +137,7 @@ func addOrder(elevatorID int, order Source.ButtonMessage, currentFloor int, movi
 		queue.last = &newOrder
 		queue.length = 1
 		orderInEmptyQueue <- 1
+		go saveAndSendQueue()
 		return
 	} else if (queue.length == 1) {
 		if equalOrders(queue.head.value, order) {
@@ -156,6 +151,7 @@ func addOrder(elevatorID int, order Source.ButtonMessage, currentFloor int, movi
 				queue.head.next = &newOrder
 				queue.last = &newOrder
 			}
+		go saveAndSendQueue()
 		return
 		}
 	} else {
@@ -167,6 +163,7 @@ func addOrder(elevatorID int, order Source.ButtonMessage, currentFloor int, movi
 			newOrder.next = queue.head
 			queue.head = &newOrder
 			queue.length++
+			go saveAndSendQueue()
 			return
 		}
 		for i:=0; i < queue.length-1; i++ {
@@ -177,6 +174,7 @@ func addOrder(elevatorID int, order Source.ButtonMessage, currentFloor int, movi
 					newOrder.next = (*nodePointer).next
 					(*nodePointer).next = &newOrder
 					queue.length++
+					go saveAndSendQueue()
 					return
 				} else {
 					nodePointer = (*nodePointer).next
@@ -186,6 +184,7 @@ func addOrder(elevatorID int, order Source.ButtonMessage, currentFloor int, movi
 		queue.last.next = &newOrder
 		queue.last = &newOrder
 		queue.length++
+		go saveAndSendQueue()
 	}
 }
 
@@ -266,6 +265,7 @@ func removeOrder(finishedRemoving chan int, orderRemovedChannel chan Source.Butt
 				//deletedOrderChannel <- orderRemoved
 				orderRemovedChannel <- orderRemoved
 				finishedRemoving <- 1
+				go saveAndSendQueue()
 				return
 			}
 		} else {
@@ -276,6 +276,7 @@ func removeOrder(finishedRemoving chan int, orderRemovedChannel chan Source.Butt
 			//deletedOrderChannel <- orderRemoved
 			orderRemovedChannel <- orderRemoved
 			finishedRemoving <- 1
+			go saveAndSendQueue()
 			return
 		}
 	}
@@ -295,7 +296,7 @@ func PrintQueue() {
 	println("Element 1:\nEtasje: ", queue.head.value.Floor, "\tKnapp: ", queue.head.value.Button,"\n")
 	var newOrder *node
 	newOrder = queue.head.next
-	for i:=1 ; i < queue.length-1; i++ {
+	for i:=1 ; i < queue.length; i++ {
 		println("Element", i+1,":\nEtasje: ", newOrder.value.Floor, "\tKnapp: ", newOrder.value.Button,"\n")
 		newOrder = newOrder.next
 	}
@@ -305,7 +306,7 @@ func recieveExternalQueue(elevatorID int, button Source.ButtonMessage) {
 	
 	if (button.Value == 1 && button.Button != Source.BUTTON_COMMAND) {
 		allExternalQueues[elevatorID] = append(allExternalQueues[elevatorID], button)
-	} else if (button.Value == 0) {
+	} else if (button.Value == 0 && button.Button != Source.BUTTON_COMMAND) {
 		for i := 0; i < len(allExternalQueues[elevatorID]); i++ {
 			if (allExternalQueues[elevatorID][i].Floor == button.Floor && allExternalQueues[elevatorID][i].Button == button.Button) {
 				allExternalQueues[elevatorID] = append(allExternalQueues[elevatorID][:(i-1)],allExternalQueues[elevatorID][i:]...)  			
@@ -379,12 +380,14 @@ func saveAndSendQueue() {
 	var newOrder *node
 	newOrder = queue.head.next
 	for i:=1 ; i < queue.length; i++ {
-		qList = append(qList, newOrder.value.Floor)
-		qList = append(qList, newOrder.value.Button)
+		if (newOrder.value.Button == Source.BUTTON_COMMAND) {
+			qList = append(qList, newOrder.value.Floor)
+			qList = append(qList, newOrder.value.Button)
+		}
 		newOrder = newOrder.next
 	}
 	
-	FileHandler.Write(NumOfElevs, NumOfFloors, queue.length, qList)
+	FileHandler.Write(NumOfElevs, NumOfFloors, len(qList), qList)
 	//UDP.sendQueue()
 	
 }
