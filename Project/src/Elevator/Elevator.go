@@ -6,7 +6,7 @@ import(
 	"driver"
 	"Queue"	
 	"Source"
-   	//"fmt"
+   	//"math"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 )
 
 func Elevator(){
-	elevatorStatus := Source.Elevator{0, -1, -1}
+	elevatorStatus := Source.Elevator{2, -1, -1}
 	//elev2 := Source.Elevator{1, -1, -1}
 	//elev3 := Source.Elevator{2, -1, -1}
 	
@@ -45,26 +45,26 @@ func Elevator(){
 	removeOrderChannel := make(chan int, 1)
 	nextOrderChannel := make(chan int, 1)
 	checkOrdersChannel := make(chan int, 1)
-	orderRemovedChannel := make(chan int, 1)
-	newElevInfoChannel := make(chan Source.Elevator,1)
-	fromUdpToQueue := make(chan Source.Message, 1)
+	finishedRemoving := make(chan int, 1)
+	fromElevToQueue := make(chan Source.Message, 1)
+	orderRemovedChannel := make(chan Source.ButtonMessage, 1)
 	//UDP
 
-	completedOrderChannel := make(chan Source.Message, 1)
+	completedOrderChannel := make(chan Source.ButtonMessage, 1)
 	externalOrderChannel := make(chan Source.ButtonMessage, 1)
-	UDPaddOrderChannel := make(chan Source.Message, 1)
+	handleOrderChannel := make(chan Source.Message, 1)
 	removeExternalOrderChannel := make(chan Source.Message, 1)
-
+	bestElevatorChannel := make(chan Source.Message, 1)
+	removeElevatorChannel := make(chan int, 1)
 	nextOrderedFloor := 100
 
 
 	
 	
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel)
-  	go Queue.Queue(addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, orderRemovedChannel, newElevInfoChannel, fromUdpToQueue)
-   	go handleOrders(2, addOrderChannel , setButtonLightChannel, newOrderChannel, externalOrderChannel, UDPaddOrderChannel)
-	//SKAL FROMUDPTOQUEUE tAKAST INN I SLAVE???????????????????????????
-	go UDP.Slave(completedOrderChannel, externalOrderChannel, updateElevatorInfoChannel, UDPaddOrderChannel , removeExternalOrderChannel, newElevInfoChannel, fromUdpToQueue)
+  	go Queue.Queue(elevatorStatus, addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, finishedRemoving, fromElevToQueue, bestElevatorChannel, removeElevatorChannel, completedOrderChannel, orderRemovedChannel)
+   	go handleOrders(2, addOrderChannel , setButtonLightChannel, newOrderChannel, externalOrderChannel, handleOrderChannel, fromElevToQueue, orderRemovedChannel, completedOrderChannel)
+	go UDP.Slave(externalOrderChannel, updateElevatorInfoChannel, handleOrderChannel, removeExternalOrderChannel, bestElevatorChannel, removeElevatorChannel, completedOrderChannel)
 
 	run <- 1
 
@@ -92,7 +92,6 @@ func Elevator(){
 				}
 
 				updateElevatorInfoChannel <- elevatorStatus
-				newElevInfoChannel <- elevatorStatus
 				//println("currentFloor:", elevatorStatus.CurrentFloor, "\nOrderedFloor", nextOrderedFloor, "Direccion:", elevatorStatus.Direction)
 				//println("NEXTORDEEER", nextOrderedFloor, "Current floor " , currentFloor)
 				if(elevatorStatus.CurrentFloor == nextOrderedFloor ){
@@ -101,28 +100,30 @@ func Elevator(){
 												 	
 			case <- stop:
 
-               /// println("ELEVATOR: StopChannel")
+                println("ELEVATOR: StopChannel")
+				
 				stopChannel <- elevatorStatus.Direction
 				wait <- 1
                 break
 
 			case <- wait:
 				
-                //println("ELEVATOR :WAIT")
+                println("ELEVATOR :WAIT")
 			 	wait:
 				for{
 					select{
 						case <- stoppedChannel:
 							removeOrderChannel <- elevatorStatus.CurrentFloor
-							<- orderRemovedChannel	
-							//println("order removed")
+							println("Removing")
+							<- finishedRemoving
+							println("order removed")
 							run <- 1
 							break wait
 					}
 				}
 							
 			case <- run:
-        		//println("ELEVATOR :RUN")
+        		println("ELEVATOR :RUN")
 				checkOrdersChannel <- elevatorStatus.CurrentFloor
 				orderedFloor := <- nextOrderChannel
 				nextOrderedFloor = orderedFloor
@@ -142,17 +143,7 @@ func Elevator(){
             case <- orderInEmptyQueue:
 				run <- 1
 
-/*
-		  	case updatedElevInfo := <- UpdateElevatorInfoChannel:
 
-				if(elev1.ID == updatedElevInfo.ID){
-					elev1 = updatedElevInfo
-				} else if (elev2.ID == updatedElevInfo.ID){
-					elev2 = updatedElevInfo
-				} else if (elev3.ID == updatedElevInfo.ID){
-					elev3 = updatedElevInfo
-				}
-				*/
 /*			case newReceivedOrder := <- addOrderChannel:
 
 				if(newReceivedOrder.MessageTo == elev1.ID){
@@ -166,7 +157,7 @@ func Elevator(){
 }
 
 
-func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, setButtonLightChannel chan Source.ButtonMessage, newOrderChannel chan Source.ButtonMessage, externalOrderChannel chan Source.ButtonMessage, UDPaddOrderChannel chan Source.Message, fromUdpToQueue chan Source.Message){
+func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, setButtonLightChannel chan Source.ButtonMessage, newOrderChannel chan Source.ButtonMessage, externalOrderChannel chan Source.ButtonMessage, handleOrderChannel chan Source.Message, fromElevToQueue chan Source.Message, orderRemovedChannel chan Source.ButtonMessage, completedOrderChannel chan Source.ButtonMessage){
 	for{
 		select{
 			case newOrder := <- newOrderChannel:
@@ -178,16 +169,24 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 					externalOrderChannel <- newOrder
 					setButtonLightChannel <- newOrder
 				}
-			case newExternalOrder := <- UDPaddOrderChannel:	
-				fromUdpToQueue <- newExternalOrder  
+			case newExternalOrder := <- handleOrderChannel:	
+				fromElevToQueue <- newExternalOrder  
 				if(newExternalOrder.CompletedOrder && elevatorID != newExternalOrder.MessageTo){
 					newExternalOrder.Button.Value = 0
 					setButtonLightChannel <- newExternalOrder.Button
-				} else if(newExternalOrder.NewOrder){
+				} else if(newExternalOrder.NewOrder && newExternalOrder.AcceptedOrder){
 				 	newExternalOrder.Button.Value = 1
 					setButtonLightChannel <- newExternalOrder.Button
 				}
-	
+			case orderRemoved := <- orderRemovedChannel:
+				println("HAndleing orders")
+				orderRemoved.Value = 0
+				if (orderRemoved.Button != Source.BUTTON_COMMAND) {
+					completedOrderChannel <- orderRemoved
+					fromElevToQueue <- Source.Message{false, false, false, true, false, elevatorID, -1, Source.Elevator{elevatorID, -1, -1}, orderRemoved}
+				}
+				setButtonLightChannel <- orderRemoved
+				println("Done Handling ordeurs")
 		}
 	}
 }

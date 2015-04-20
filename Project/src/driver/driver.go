@@ -200,7 +200,7 @@ func elev_get_button_signal(button int, floor int) int{
 
 func readButtons(NewOrderChannel chan Source.ButtonMessage) {
 	var buttonPressed Source.ButtonMessage
-	var lastButtonPressed Source.ButtonMessage
+	lastButtonPressed := Source.ButtonMessage{-1, -1, -1}
 	for{   
 		time.Sleep(50*time.Millisecond) 	
 		buttonPressed.Floor = -1
@@ -283,17 +283,10 @@ func setExternalLights(externalOrders [][] bool, elevatorID int) {
 
 
 func stop(currentFloor int, direction int, stoppedChannel chan int){
-	//println("driver: stop")
+	println("driver: stop")
 	elev_set_speed(0)
 	elev_set_door_open_lamp(1)
 
-	elev_set_button_lamp(Source.ButtonMessage{currentFloor, Source.BUTTON_COMMAND, 0})
-	if(direction == 0 || currentFloor == 0){
-		elev_set_button_lamp(Source.ButtonMessage{currentFloor, Source.BUTTON_CALL_UP, 0})
-	}
-	if (direction == 1 || currentFloor == 3){
-		elev_set_button_lamp(Source.ButtonMessage{currentFloor, Source.BUTTON_CALL_DOWN, 0})
-	}
 	//println("SLEEEPING")	
 
 	//FORSLAGcloseDOooR()
@@ -308,7 +301,7 @@ func stop(currentFloor int, direction int, stoppedChannel chan int){
 
 func closeDoor(stoppedChannel chan int, resetDoorChannel chan int){
 	
-	for
+	for{
 		select{
 			case <- time.After(3*time.Second):
 				elev_set_door_open_lamp(0)
@@ -316,6 +309,8 @@ func closeDoor(stoppedChannel chan int, resetDoorChannel chan int){
 				<- resetDoorChannel
 			case <- resetDoorChannel:
 				//Reset door timer
+		}
+	}
 	return
 
 }
@@ -343,7 +338,7 @@ func Drivers(newOrderChannel chan Source.ButtonMessage, floorReachedChannel chan
 				
 			case button := <- setButtonLightChannel:
 				//println("DRIVER: setbutton")
-				elev_set_button_lamp(button)
+				go elev_set_button_lamp(button)
 
 			case floor:= <- sensorChannel:
 				//println("DRIVER: SENSORCHANNEL")

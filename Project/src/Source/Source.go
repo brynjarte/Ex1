@@ -13,6 +13,7 @@ type ButtonMessage struct {
 
 type Message struct{
 	NewOrder bool
+	AcceptedOrder bool
 	FromMaster bool
 	CompletedOrder bool
 	UpdatedElevInfo bool
