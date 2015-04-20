@@ -8,27 +8,6 @@ import(
 	//"fmt"
 )
 
-/*type Message struct{
-	NewOrder bool
-	FromMaster bool
-	CompletedOrder bool
-	UpdatedElevInfo bool
-	MessageTo int
-
-	ElevInfo Elevator
-	Button Source.ButtonMessage
-}
-
-type Elevator struct {
-	ID int	
-	CurrentFloor int
-	Direction int
-	//numberInQueue int
-}*/
-
-
-
-
 
 func recieveUdpMessage(master bool, responseChannel chan Source.Message, terminate chan bool, terminated chan int){
 	
@@ -169,7 +148,7 @@ func master( externalOrderChannel chan Source.ButtonMessage, updateElevatorInfoC
 	go recieveUdpMessage(true, messageFromSlaveChannel, terminateFromSlave, terminatedFromSlave)
 
 	for {
-        select{
+		select{
 
 			case messageFromMaster := <- messageFromMasterChannel:
 				println("TO MASTERAA", messageFromMaster.MessageFrom)
