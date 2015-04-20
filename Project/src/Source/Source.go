@@ -1,5 +1,9 @@
 package Source
 
+import( 
+	"FileHandler"
+)
+
 const (
 	BUTTON_CALL_UP = 0
 	BUTTON_CALL_DOWN = 1
@@ -35,6 +39,6 @@ type Elevator struct {
 	//numberInQueue int
 }
 
-func sourceInit() {
+func SourceInit() {
 	FileHandler.Read(&NumOfFloors, &NumOfElevs)	
 }
