@@ -77,6 +77,8 @@ func Queue(elevator Source.Elevator, addOrderChannel chan Source.ButtonMessage, 
 					if(newUpdate.NewOrder && newUpdate.MessageTo == elevator.ID){
 						addOrderChannel <- newUpdate.Button
 						go recieveExternalQueue(newUpdate.MessageTo, newUpdate.Button)
+					} else if (newUpdate.NewOrder && newUpdate.MessageTo != elevator.ID && newUpdate.AcceptedOrder){
+						go recieveExternalQueue(newUpdate.MessageTo, newUpdate.Button)
 					} else if( newUpdate.CompletedOrder && newUpdate.MessageTo != elevator.ID){
 						go recieveExternalQueue(newUpdate.MessageTo, newUpdate.Button)
 					} else if (newUpdate.UpdatedElevInfo && newUpdate.MessageTo != elevator.ID){
