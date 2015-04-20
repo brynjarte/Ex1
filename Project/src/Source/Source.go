@@ -5,6 +5,10 @@ const (
 	BUTTON_CALL_DOWN = 1
 	BUTTON_COMMAND = 2
 )
+
+var NumOfFloors int
+var NumOfElevs int
+
 type ButtonMessage struct {
 	Floor int
 	Button int
