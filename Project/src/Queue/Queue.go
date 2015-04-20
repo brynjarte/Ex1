@@ -74,7 +74,7 @@ func Queue(elevator Source.Elevator, addOrderChannel chan Source.ButtonMessage, 
 			case newUpdate := <- fromUdpToQueue:
 				println("QUEUE: mesaage")
 				if(newUpdate.FromMaster){		
-					if(newUpdate.NewOrder && newUpdate.MessageTo == elevator.ID){
+					if(newUpdate.NewOrder && newUpdate.MessageTo == elevator.ID && !newUpdate.AcceptedOrder){
 						addOrderChannel <- newUpdate.Button
 						go recieveExternalQueue(newUpdate.MessageTo, newUpdate.Button)
 					} else if (newUpdate.NewOrder && newUpdate.MessageTo != elevator.ID && newUpdate.AcceptedOrder){
