@@ -1,7 +1,6 @@
 package FileHandler
 
 import ( 
-	//"io"
 	"os"
 	"fmt"
 	//"encoding/binary"
@@ -32,9 +31,13 @@ func Read(NumOfElevs *int, NumOfFloors *int) [] int{
 
 	*NumOfFloors = buf
 
+	_, err = fmt.Fscanf(fd, "%d\n", &buf)
+	
+	qLength := buf
+
 	QueueList := make([]int, 0)
 	
-	for i:=0; i < *NumOfFloors; i++{
+	for i:=0; i < qLength; i++{
 		
 		_, err = fmt.Fscanf(fd, "%d", &buf)
 		QueueList  = append(QueueList, buf)
@@ -79,7 +82,7 @@ func Write(numOfElevs int, numOfFloors int, queue []Directions,ID int) {
 }
 */
 
-func Write(numOfElevs int, numOfFloors int, queue []int) {
+func Write(numOfElevs int, numOfFloors int, length int, queue []int) {
 	fo, err := os.Create("output.txt")
     if err != nil {
         panic(err)
@@ -95,6 +98,10 @@ func Write(numOfElevs int, numOfFloors int, queue []int) {
     }
             
     if _, err := fmt.Fprintf(fo,"%d\n",numOfFloors); err != nil {
+            panic(err)
+    }
+    
+    if _, err := fmt.Fprintf(fo,"%d\n",length); err != nil {
             panic(err)
     }
     

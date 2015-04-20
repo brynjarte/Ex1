@@ -4,7 +4,7 @@ import(
 	"net"
 	"encoding/json"
 	"time"
-    "Source"
+    	"Source"
 	//"fmt"
 )
 
@@ -228,7 +228,7 @@ func master( externalOrderChannel chan Source.ButtonMessage, updateElevatorInfoC
 								println("No ACK")
 								removeElevator <- distributeOrder.MessageTo
 								distributeOrder.FromMaster = false
-								handleOrderChannel <- distributeOrder
+								//handleOrderChannel <- distributeOrder
 								break ack
 
 						}

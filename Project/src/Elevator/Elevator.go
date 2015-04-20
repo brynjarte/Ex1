@@ -179,14 +179,12 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 					setButtonLightChannel <- newExternalOrder.Button
 				}
 			case orderRemoved := <- orderRemovedChannel:
-				println("HAndleing orders")
 				orderRemoved.Value = 0
 				if (orderRemoved.Button != Source.BUTTON_COMMAND) {
 					completedOrderChannel <- orderRemoved
 					fromElevToQueue <- Source.Message{false, false, false, true, false, elevatorID, -1, Source.Elevator{elevatorID, -1, -1}, orderRemoved}
 				}
 				setButtonLightChannel <- orderRemoved
-				println("Done Handling ordeurs")
 		}
 	}
 }
