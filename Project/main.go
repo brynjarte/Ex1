@@ -16,7 +16,7 @@ func main() {
 	
 	//var queue [4][2] bool
 
-	go Elevator.Elevator()
+	go Elevator.Elevator(0)
 
 	<- someChannel
 	

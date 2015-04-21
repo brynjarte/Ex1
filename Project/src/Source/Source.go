@@ -8,6 +8,9 @@ const (
 	BUTTON_CALL_UP = 0
 	BUTTON_CALL_DOWN = 1
 	BUTTON_COMMAND = 2
+	
+	UP = 0
+	DOWN = 1
 )
 
 var NumOfFloors int
@@ -28,11 +31,12 @@ type Message struct{
 	MessageFrom int
 	MessageTo int
 
-	ElevInfo Elevator
+	ElevInfo ElevatorInfo
 	Button ButtonMessage
+	externalQueue map[int] []ButtonMessage
 }
 
-type Elevator struct {
+type ElevatorInfo struct {
 	ID int	
 	CurrentFloor int
 	Direction int
