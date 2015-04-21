@@ -6,7 +6,7 @@ import(
 	"driver"
 	"Queue"	
 	"Source"
-   	//"math"
+
 )
 
 const (
@@ -43,6 +43,9 @@ func Elevator(elevatorID int){
 	finishedRemoving := make(chan int, 1)
 	fromElevToQueue := make(chan Source.Message, 1)
 	orderRemovedChannel := make(chan Source.ButtonMessage, 1)
+	
+	requestQueueChannel := make(chan int, 1)
+	receiveQueueChannel := make(chan map [int][]Source.ButtonMessage, 1)
 	//UDP
 
 	completedOrderChannel := make(chan Source.ButtonMessage, 1)
@@ -53,22 +56,24 @@ func Elevator(elevatorID int){
 	removeElevatorChannel := make(chan int, 1)
 	nextOrderedFloor := 100
 
-
 	
 	go Source.SourceInit()
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel, initFinished)
 	<- initFinished
-  	go Queue.Queue(elevatorStatus, addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, finishedRemoving, fromElevToQueue, bestElevatorChannel, removeElevatorChannel, completedOrderChannel, orderRemovedChannel)
+	println("Finished inting")
+  	go Queue.Queue(elevatorStatus, addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, finishedRemoving, fromElevToQueue, bestElevatorChannel, removeElevatorChannel, completedOrderChannel, orderRemovedChannel, requestQueueChannel, receiveQueueChannel)
    	go handleOrders(elevatorStatus.ID, addOrderChannel , setButtonLightChannel, newOrderChannel, externalOrderChannel, handleOrderChannel, fromElevToQueue, orderRemovedChannel, completedOrderChannel)
-	go Network.Slave(elevatorStatus, externalOrderChannel, updateElevatorInfoChannel, handleOrderChannel, removeExternalOrderChannel, bestElevatorChannel, removeElevatorChannel, completedOrderChannel)
+	go Network.Slave(elevatorStatus, externalOrderChannel, updateElevatorInfoChannel, handleOrderChannel, removeExternalOrderChannel, bestElevatorChannel, removeElevatorChannel, completedOrderChannel, requestQueueChannel, receiveQueueChannel)
+	
 
-	run <- 1
+	//run <- 1
 	prevFloor := 10
 
-
+	
 	for{
 		select{
 			case arrivedAtFloor := <- floorReachedChannel:// FLOOR REACHED		
+				println("FLOORREACHED")
 				prevFloor = elevatorStatus.CurrentFloor
 				elevatorStatus.CurrentFloor = arrivedAtFloor
 
@@ -157,6 +162,7 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 					setButtonLightChannel <- newOrder
 				}
 			case newExternalOrder := <- handleOrderChannel:	
+				println("New ext update is", newExternalOrder.UpdatedElevInfo)
 				fromElevToQueue <- newExternalOrder  
 				if(newExternalOrder.CompletedOrder && elevatorID != newExternalOrder.MessageTo){
 					newExternalOrder.Button.Value = 0

@@ -33,7 +33,7 @@ type Message struct{
 
 	ElevInfo ElevatorInfo
 	Button ButtonMessage
-	externalQueue map[int] []ButtonMessage
+	//ExternalQueue map[int][] ButtonMessage
 }
 
 type ElevatorInfo struct {
@@ -45,4 +45,5 @@ type ElevatorInfo struct {
 
 func SourceInit() {
 	FileHandler.Read(&NumOfElevs, &NumOfFloors)	
+	println("NF", NumOfFloors,"\nNE",NumOfElevs)
 }

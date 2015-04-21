@@ -52,7 +52,7 @@ func elev_init(sensorChannel chan int) int{
 	elev_set_door_open_lamp(0)
 	elev_set_floor_indicator(0)
 	select{
-		case floor <- := sensorChannel:
+		case floor := <- sensorChannel:
 				sensorChannel <- floor
 				return 1
 		case <- time.After(10*time.Millisecond):
