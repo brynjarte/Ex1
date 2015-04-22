@@ -45,7 +45,7 @@ func Elevator(elevatorID int){
 	orderRemovedChannel := make(chan Source.ButtonMessage, 1)
 	
 	requestQueueChannel := make(chan int, 1)
-	receiveQueueChannel := make(chan map [int][]Source.ButtonMessage, 1)
+	receiveQueueChannel := make(chan Source.Message, 10)
 	//UDP
 
 	completedOrderChannel := make(chan Source.ButtonMessage, 1)

@@ -33,7 +33,6 @@ type Message struct{
 
 	ElevInfo ElevatorInfo
 	Button ButtonMessage
-	//ExternalQueue map[int][] ButtonMessage
 }
 
 type ElevatorInfo struct {
