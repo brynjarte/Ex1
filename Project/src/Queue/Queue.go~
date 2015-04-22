@@ -25,6 +25,7 @@ type linkedList struct{
 	length int
 }
 
+var numOrdersInDirection = make(map[int] [2]int)
 var allExternalQueues  = make(map[int] []Source.ButtonMessage)
 var allElevatorsInfo = make(map[int] Source.ElevatorInfo)
 var queue = linkedList{nil,nil,0}
@@ -33,7 +34,7 @@ var queue = linkedList{nil,nil,0}
 func queueInit(elevator Source.ElevatorInfo){
 	orderInEmptyQueue := make(chan int, 1)
 	fetchMyQueue(elevator.ID, elevator.CurrentFloor, elevator.Direction, orderInEmptyQueue)
-	
+
 	updateElevInfo(elevator)
 }
 
@@ -123,15 +124,17 @@ func getExternalQueues(elevator Source.ElevatorInfo, requestQueueChannel chan in
 func removeElevator(lostElevator int, elevatorInfo Source.ElevatorInfo, bestElevatorChannel chan Source.Message, addOrderChannel chan Source.ButtonMessage){
 	unDistributedOrder := Source.Message{true, false, false, false, false, -1, -1, elevatorInfo, Source.ButtonMessage{-1, -1, -1}}
 
+	delete(numOrdersInDirection, lostElevator)
+	delete(allElevatorsInfo, lostElevator)
+	
 	for orders := 0; orders < len(allExternalQueues[lostElevator]); orders++ {
 		order := allExternalQueues[lostElevator][orders]
 		unDistributedOrder.Button = order
 		go findBestElevator(lostElevator, unDistributedOrder, bestElevatorChannel, addOrderChannel)
 		time.Sleep(50*time.Microsecond) // NØDVENDIG?
 	}		
-
+	
 	delete(allExternalQueues, lostElevator) 
-	delete(allElevatorsInfo, lostElevator)
 }
 
 
@@ -210,14 +213,14 @@ func compareOrders(oldOrder Source.ButtonMessage, newOrder Source.ButtonMessage,
 			//direction DOWN
 			if (oldOrder.Floor >  newOrder.Floor && oldOrder.Button != Source.BUTTON_CALL_UP) {
 				return oldOrder
-			} else if (oldOrder.Floor <= newOrder.Floor || oldOrder.Button == Source.BUTTON_CALL_UP) {
+			} else if (oldOrder.Floor <= newOrder.Floor || oldOrder.Button == Source.BUTTON_CALL_UP && direction != Source.UP) {
 				return newOrder
 			} 
 		} else if newOrder.Floor > currentFloor {
 			//direction UP
 			if (oldOrder.Floor <  newOrder.Floor && oldOrder.Button != Source.BUTTON_CALL_DOWN) {
 				return oldOrder
-			} else if (oldOrder.Floor >= newOrder.Floor || oldOrder.Button == Source.BUTTON_CALL_DOWN) {
+			} else if (oldOrder.Floor >= newOrder.Floor || oldOrder.Button == Source.BUTTON_CALL_DOWN && direction != Source.DOWN) {
 				return newOrder
 			}	
 		} else if (newOrder.Floor == currentFloor) {
@@ -326,25 +329,33 @@ func PrintQueue() {
 		newOrder = newOrder.next
 	}
 }
-var sletter int = 0
-var leggertil int = 0
+
 func recieveExternalQueue(elevatorID int, button Source.ButtonMessage) {
-	println("Len av drittet:", elevatorID, "   ",  len(allExternalQueues[elevatorID]))
+
+	numUP := numOrdersInDirection[elevatorID][UP]
+	numDOWN := numOrdersInDirection[elevatorID][DOWN]
+	var temp [2] int
+	temp[UP] = numUP
+	temp[DOWN] = numDOWN 
+
 	if (button.Value == 1 && button.Button != Source.BUTTON_COMMAND) {
 		for order := 0; order < len(allExternalQueues[elevatorID]); order++ {
 			if (allExternalQueues[elevatorID][order].Floor == button.Floor && allExternalQueues[elevatorID][order].Button == button.Button ) {
 					return
 			}
 		} 
-		println("Legger til", leggertil)
-		leggertil++
+		if(button.Button == UP){
+			temp[UP]++
+			numOrdersInDirection[elevatorID] = temp
+		} else if (button.Button == DOWN) {
+			temp[DOWN]++
+		}
 		allExternalQueues[elevatorID] = append(allExternalQueues[elevatorID], button)
 	} else if (button.Value == 0 && button.Button != Source.BUTTON_COMMAND) {
 		for order := 0; order < len(allExternalQueues[elevatorID]); order++ {
 			if (allExternalQueues[elevatorID][order].Floor == button.Floor && allExternalQueues[elevatorID][order].Button == button.Button) {
-				println("Sletter", sletter)
-				sletter++ 
 				allExternalQueues[elevatorID] = append(allExternalQueues[elevatorID][:order],allExternalQueues[elevatorID][order+1:]...)
+				//numOrdersInDirection[elevatorID][button.Button]--
 				return 			
 			}
 		}
@@ -363,7 +374,7 @@ func updateElevInfo(newElevInfo Source.ElevatorInfo){
 func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChannel chan Source.Message, addOrderChannel chan Source.ButtonMessage){
 	bestElevator := -1
 	bestCost := 100
-
+	calculateCost:
 	for elevator := range allElevatorsInfo{
 		println("Elevator nr. ", elevator)
 		directionOfOrder := order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor
@@ -373,14 +384,23 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 					directionOfOrder = DOWN
 				}
 
-		if(allElevatorsInfo[elevator].Direction == directionOfOrder){
+		if (numOrdersInDirection[elevator][UP] == 0 && numOrdersInDirection[elevator][DOWN] == 0) {
+			bestElevator = elevator
+			break calculateCost
+		} else if(allElevatorsInfo[elevator].Direction == directionOfOrder && allElevatorsInfo[elevator].Direction == order.Button.Button){
 			tempCost := int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor)))
 			if(tempCost < bestCost){
 				bestCost = tempCost
 				bestElevator = elevator
 			}
-		} else {
-			tempCost := 3 + int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor)))
+		} else if (allElevatorsInfo[elevator].Direction != directionOfOrder && allElevatorsInfo[elevator].Direction == order.Button.Button) {
+			tempCost := numOrdersInDirection[elevator][UP] + numOrdersInDirection[elevator][DOWN]
+			if(tempCost < bestCost){
+				bestCost = tempCost
+				bestElevator = elevator
+			}
+		} else if (allElevatorsInfo[elevator].Direction != directionOfOrder) || (allElevatorsInfo[elevator].Direction == directionOfOrder && allElevatorsInfo[elevator].Direction != order.Button.Button) {
+			tempCost :=  numOrdersInDirection[elevator][allElevatorsInfo[elevator].Direction] + int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor)))
 			if(tempCost < bestCost){
 				bestCost = tempCost
 				bestElevator = elevator
