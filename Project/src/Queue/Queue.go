@@ -130,8 +130,10 @@ func removeElevator(lostElevator int, elevatorInfo Source.ElevatorInfo, bestElev
 	for orders := 0; orders < len(allExternalQueues[lostElevator]); orders++ {
 		order := allExternalQueues[lostElevator][orders]
 		unDistributedOrder.Button = order
+		//orderRemovedChannel <- order KAN DETTA VER LURT
 		go findBestElevator(lostElevator, unDistributedOrder, bestElevatorChannel, addOrderChannel)
 		time.Sleep(50*time.Microsecond) // NØDVENDIG?
+		
 	}		
 	
 	delete(allExternalQueues, lostElevator) 

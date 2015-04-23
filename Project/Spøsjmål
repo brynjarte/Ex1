@@ -4,7 +4,8 @@
 - //COST FUNCTION
 - //master detter ut, kjenner andre heisen andre køer?
 - //Slett ext lys om detter ut (alene) //ELLER IKKE? SPØR STUDASS eller kyrre
-- //Slett ext kø detter ut
+- //Slett ext kø detter ut:
+- Forslag i removeElevator() for å fjerne lys etc.
 
 - Endre for-løjkk til Source.__numof
 
@@ -15,3 +16,6 @@
 - Lys på når kommer på nettverket( den andre slaven).
 - Sende i'm alive med status?
 - Skrive til backup.
+- Dersom me ikkje får opna backupen, så må me ha standard instilling.
+- Me har const{UP, DOWN} øvealt.
+
