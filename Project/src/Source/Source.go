@@ -16,6 +16,8 @@ const (
 var NumOfFloors int
 var NumOfElevs int
 
+var ErrorChannel = make(chan error, 10)
+
 type ButtonMessage struct {
 	Floor int
 	Button int

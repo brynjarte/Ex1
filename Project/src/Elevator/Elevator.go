@@ -9,12 +9,22 @@ import(
 
 )
 
-const (
-	UP = 0
-	DOWN = 1
-)
+func errorHandling(elevatorID int){
+	defer Elevator(elevatorID)
+	for{
+		select{
+			case err := <- Source.ErrorChannel:
+				if( err != nil){
+					//SKRIV TIL LOGG
+					panic(err)
+					return
+				}
+		}
+	}
+}
 
 func Elevator(elevatorID int){
+
 	elevatorStatus := Source.ElevatorInfo{elevatorID, -1, -1}
 
 	//STATES
@@ -56,7 +66,7 @@ func Elevator(elevatorID int){
 	removeElevatorChannel := make(chan int, 1)
 	nextOrderedFloor := 100
 
-	
+	go errorHandling(elevatorStatus.ID)
 	go Source.SourceInit()
 	go driver.Drivers(newOrderChannel, floorReachedChannel, setSpeedChannel, stopChannel, stoppedChannel, setButtonLightChannel, initFinished)
 	<- initFinished
@@ -83,14 +93,14 @@ func Elevator(elevatorID int){
 				direction := prevFloor - elevatorStatus.CurrentFloor
 
 				if(direction < 0){
-					elevatorStatus.Direction = UP
+					elevatorStatus.Direction = Source.UP
 				}else if (direction > 0) {
-					elevatorStatus.Direction = DOWN
+					elevatorStatus.Direction = Source.DOWN
 				}
 				
-				if(elevatorStatus.CurrentFloor < nextOrderedFloor && elevatorStatus.Direction == DOWN){
+				if(elevatorStatus.CurrentFloor < nextOrderedFloor && elevatorStatus.Direction == Source.DOWN){
 					run <- 1
-				} else if(elevatorStatus.CurrentFloor > nextOrderedFloor && elevatorStatus.Direction == UP){
+				} else if(elevatorStatus.CurrentFloor > nextOrderedFloor && elevatorStatus.Direction == Source.UP){
 					run <- 1
 				}
 					

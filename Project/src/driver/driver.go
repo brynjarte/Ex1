@@ -4,6 +4,7 @@ import (
     "math"
     "time"
 	"Source"
+	"errors"
 )
 
 const (
@@ -14,7 +15,6 @@ const (
 	N_FLOORS = 4 // MÅ ENKELT KUNNA ENDRAST
 	N_BUTTONS = 3 
 
-	ERROR = 20132
 )
 
 
@@ -32,29 +32,32 @@ var button_channel_matrix = [N_FLOORS][N_BUTTONS] int {
 	{BUTTON_UP4, BUTTON_DOWN4, BUTTON_COMMAND4},
 }
 
-func elev_init(sensorChannel chan int) int{
+func elev_init(sensorChannel chan int){
 
 	if (io_init() == 0) {
-		return 0
+		Source.ErrorChannel <- errors.New("ELEV_INIT: IO_INIT_FAIL")
+		return
 	}
 	
-	for i := 0; i < N_FLOORS; i++ {
+	for floor := 0; floor < Source.NumOfFloors; i++ {
 		if i != 0 {
-			elev_set_button_lamp(Source.ButtonMessage{i,Source.BUTTON_CALL_DOWN, 0})
+			elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_DOWN, 0})
 		}
-		if i != (N_FLOORS - 1) {
-			elev_set_button_lamp(Source.ButtonMessage{i,Source.BUTTON_CALL_UP, 0})
+		if i != (Source.NumOfFloors - 1) {
+			elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_UP, 0})
 		}
 
-		elev_set_button_lamp(Source.ButtonMessage{i,Source.BUTTON_COMMAND, 0})
+		elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_COMMAND, 0})
 	}
 
 	elev_set_door_open_lamp(0)
 	elev_set_floor_indicator(0)
+	
 	select{
 		case floor := <- sensorChannel:
 				sensorChannel <- floor
-				return 1
+				return
+				
 		case <- time.After(10*time.Millisecond):
 				elev_set_speed(-300)
 	}
@@ -66,11 +69,16 @@ func elev_init(sensorChannel chan int) int{
 				elev_set_speed(219)
 				<- time.After(7*time.Millisecond)
 				elev_set_speed(0)
-				return 1
+				return
+				
+			case <- time.After(10*time.Second):
+				elev_set_speed(0)
+				Source.ErrorChannel <- errors.New("ELEV_INIT: CAN_NOT_REACH_FLOOR_FAIL")
+				return
 		}
 	}
 
-	return 1
+	return
 }
 
 func elev_set_speed(speed int){
@@ -89,6 +97,16 @@ func elev_set_speed(speed int){
     io_write_analog(MOTOR, 2048 + 4*speed)
 }
 
+
+func setSpeed(direction int){
+	
+	if(direction == Source.UP){
+		elev_set_speed(150)
+	} else if(direction == Source.DOWN){
+		elev_set_speed(-150)
+	} 		
+}
+
 func elev_set_door_open_lamp(value int) {
 	if value != 0 {
 		io_set_bit(LIGHT_DOOR_OPEN)
@@ -98,9 +116,10 @@ func elev_set_door_open_lamp(value int) {
 }
 
 
-func elev_set_floor_indicator(floor int) int {
-	if (floor < 0 || floor >= N_FLOORS) {
-		return ERROR;
+func elev_set_floor_indicator(floor int) {
+	if (floor < 0 || floor >= Source.NumOfFloors) {
+		Source.ErrorChannel <- errors.New("ELEV_SET_FLOOR_INDICATOR: FLOOR_OUT_OF_RANGE_FAIL")
+		return
 	}
 
 	if (floor & 0x02) != 0 { 
@@ -114,27 +133,27 @@ func elev_set_floor_indicator(floor int) int {
 	} else {
 		io_clear_bit(LIGHT_FLOOR_IND2)
 	}
-	
-	return 0
+
 }
 
 
-func elev_set_button_lamp(buttonPushed Source.ButtonMessage) int{
+func elev_set_button_lamp(buttonPushed Source.ButtonMessage){
 
 	if(buttonPushed.Floor < 0){
-		return ERROR
-	}
-	if(buttonPushed.Floor >= N_FLOORS){
-		return ERROR
-	}
-	if((buttonPushed.Button == Source.BUTTON_CALL_UP) && (buttonPushed.Floor == N_FLOORS -1)){
-		return ERROR
-	}
-	if((buttonPushed.Button == Source.BUTTON_CALL_DOWN) && (buttonPushed.Floor == 0)){
-		return ERROR
-	}
-	if((buttonPushed.Button != Source.BUTTON_CALL_UP) && (buttonPushed.Button != Source.BUTTON_CALL_DOWN) && (buttonPushed.Button != Source.BUTTON_COMMAND)){
-		return ERROR
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: FLOOR_OUT_OF_RANGE_FAIL")
+		return
+	} else if(buttonPushed.Floor >= Source.NumOfFloors){
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: FLOOR_OUT_OF_RANGE_FAIL")
+		return
+	} else if((buttonPushed.Button == Source.BUTTON_CALL_UP) && (buttonPushed.Floor == Source.NumOfFLoors -1)){
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
+		return
+	} else if((buttonPushed.Button == Source.BUTTON_CALL_DOWN) && (buttonPushed.Floor == 0)){
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
+		return
+	} else if((buttonPushed.Button != Source.BUTTON_CALL_UP) && (buttonPushed.Button != Source.BUTTON_CALL_DOWN) && (buttonPushed.Button != Source.BUTTON_COMMAND){
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
+		return
 	}
 
 	if(buttonPushed.Value != 0){
@@ -143,26 +162,27 @@ func elev_set_button_lamp(buttonPushed Source.ButtonMessage) int{
 		io_clear_bit(lamp_channel_matrix[buttonPushed.Floor][buttonPushed.Button])
 	}
 
-	return 0
+	return 
 }
 
 
 func elev_get_button_signal(button int, floor int) int{
 
 	if(floor < 0){
-		return ERROR
-	}
-	if(floor >= N_FLOORS){
-		return ERROR
-	}
-	if((button == Source.BUTTON_CALL_UP) && (floor == N_FLOORS -1)){
-		return ERROR
-	}
-	if((button == Source.BUTTON_CALL_DOWN) && (floor == 0)){
-		return ERROR
-	}
-	if((button != Source.BUTTON_CALL_UP) && (button != Source.BUTTON_CALL_DOWN) && (button != Source.BUTTON_COMMAND)){
-		return ERROR
+		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: FLOOR_OUT_OF_RANGE_FAIL")
+		return
+	} else if(floor >= Source.NumOfFLoors){
+		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: FLOOR_OUT_OF_RANGE_FAIL")
+		return
+	} else if((button == Source.BUTTON_CALL_UP) && (floor == Source.NumOfFLoors -1)){
+		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: FLOOR_OUT_OF_RANGE_FAIL")
+		return
+	} else if((button == Source.BUTTON_CALL_DOWN) && (floor == 0)){
+		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXSISTING_BUTTON_FAIL")
+		return
+	} else if((button != Source.BUTTON_CALL_UP) && (button != Source.BUTTON_CALL_DOWN) && (button != Source.BUTTON_COMMAND)){
+		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXSISTING_BUTTON_FAIL")
+		return 
 	}
 
 	if(io_read_bit(button_channel_matrix[floor][button]) != 0){
@@ -178,23 +198,23 @@ func readButtons(NewOrderChannel chan Source.ButtonMessage) {
 	for{   
 		time.Sleep(50*time.Millisecond) 	
 		buttonPressed.Floor = -1
-		for  i := 0; i < 3; i++  {
+		for  floor := 0; floor < Source.NumOfFloors-1 ; floor++  {
    
-			if ( elev_get_button_signal( Source.BUTTON_CALL_UP, i ) == 1) {
-				buttonPressed.Floor =  i
+			if ( elev_get_button_signal( Source.BUTTON_CALL_UP, floor ) == 1) {
+				buttonPressed.Floor =  floor
 				buttonPressed.Button = Source.BUTTON_CALL_UP	
-			} else if ( elev_get_button_signal( Source.BUTTON_CALL_DOWN, i+1 ) == 1) {
-				buttonPressed.Floor =  i+1
+			} else if ( elev_get_button_signal( Source.BUTTON_CALL_DOWN, floor+1 ) == 1) {
+				buttonPressed.Floor =  floor+1
 				buttonPressed.Button = Source.BUTTON_CALL_DOWN
 			} 
 		} 
     
-		for i := 0; i < 4; i++ {
+		for floor := 0; floor < Source.NumOfFLoors; floor++ {
         
-			if ( elev_get_button_signal( Source.BUTTON_COMMAND, i ) == 1 ) {
-				for ; elev_get_button_signal( Source.BUTTON_COMMAND, i ) == 1 ; {
+			if ( elev_get_button_signal( Source.BUTTON_COMMAND, floor ) == 1 ) {
+				for ; elev_get_button_signal( Source.BUTTON_COMMAND, floor ) == 1 ; {
 				}
-				buttonPressed.Floor =  i
+				buttonPressed.Floor =  floor
 				buttonPressed.Button = Source.BUTTON_COMMAND
 			}
 		}
@@ -209,7 +229,7 @@ func readButtons(NewOrderChannel chan Source.ButtonMessage) {
 func readSensors(sensorChannel chan int){
 	lastFloor := -1
 	for{
-		time.Sleep(30*time.Microsecond)
+		time.Sleep(50*time.Microsecond)
 		if (io_read_bit(SENSOR_FLOOR1) != 0 && lastFloor != 0 ) {
 			lastFloor = 0
 			sensorChannel <- lastFloor
@@ -228,33 +248,33 @@ func readSensors(sensorChannel chan int){
 		} 
 	}
 }
-
+/*
 func clearExternalLights() {
-		for i := 0; i < N_FLOORS; i++ {
-			if i != 0 {
-				elev_set_button_lamp(Source.ButtonMessage{i, Source.BUTTON_CALL_DOWN, 0})
+		for floor := 0; floor < Source.NumOfFLoors; floor++ {
+			if floor != 0 {
+				elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_DOWN, 0})
 			}
-			if i != (N_FLOORS - 1) {
-				elev_set_button_lamp(Source.ButtonMessage{i, Source.BUTTON_CALL_UP, 0})
+			if floor != (Source.NumOfFLoors - 1) {
+				elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_UP, 0})
 			}
 		}
 }
 
 func setExternalLights(externalOrders [][] bool, elevatorID int) {
-		for floor := 0; floor < N_FLOORS; floor++ {
+		for floor := 0; floor < Source.NumOfFLoors; floor++ {
 			if floor != 0 {
 				if (externalOrders[floor][1+2*elevatorID]) {
 					elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_DOWN, 1})
 				}
 			}
-			if floor != (N_FLOORS - 1) {
+			if floor != (Source.NumOfFLoors - 1) {
 				if (externalOrders[floor][2*elevatorID]) {
 					elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_UP, 1})
 				}
 			}
 		}
 }
-
+*/
 
 func stop(stoppedChannel chan int, direction int){
 
@@ -266,19 +286,13 @@ func stop(stoppedChannel chan int, direction int){
 	<- time.After(7*time.Millisecond)
 	elev_set_speed(0)
 	elev_set_door_open_lamp(1)
-		
-	//println("SLEEEPING")	
 
-	//FORSLAGcloseDOooR()
-	// resetDoorChannel <- 1
-		
 	<- time.After(3*time.Second)
 	elev_set_door_open_lamp(0)
 	stoppedChannel <- 1
 
-
 }
-
+/*
 func closeDoor(stoppedChannel chan int, resetDoorChannel chan int){
 	
 	for{
@@ -293,9 +307,9 @@ func closeDoor(stoppedChannel chan int, resetDoorChannel chan int){
 	}
 	return
 
-}
+}*/
 
-func Drivers(newOrderChannel chan Source.ButtonMessage, floorReachedChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int,setButtonLightChannel chan Source.ButtonMessage, initFinished chan int){
+func Drivers(newOrderChannel chan Source.ButtonMessage, floorReachedChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int, setButtonLightChannel chan Source.ButtonMessage, initFinished chan int){
 
 	sensorChannel := make(chan int, 1)
 	go readSensors(sensorChannel)
@@ -333,14 +347,6 @@ func Drivers(newOrderChannel chan Source.ButtonMessage, floorReachedChannel chan
 		}
 }
 
-func setSpeed(direction int){
-	
-	if(direction == Source.UP){
-		elev_set_speed(150)
-	} else if(direction == Source.DOWN){
-		elev_set_speed(-150)
-	} 		
-}
 
 
 
