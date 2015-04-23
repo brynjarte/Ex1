@@ -39,11 +39,11 @@ func elev_init(sensorChannel chan int){
 		return
 	}
 	
-	for floor := 0; floor < Source.NumOfFloors; i++ {
-		if i != 0 {
+	for floor := 0; floor < Source.NumOfFloors; floor++ {
+		if floor != 0 {
 			elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_DOWN, 0})
 		}
-		if i != (Source.NumOfFloors - 1) {
+		if floor != (Source.NumOfFloors - 1) {
 			elev_set_button_lamp(Source.ButtonMessage{floor, Source.BUTTON_CALL_UP, 0})
 		}
 
@@ -145,13 +145,13 @@ func elev_set_button_lamp(buttonPushed Source.ButtonMessage){
 	} else if(buttonPushed.Floor >= Source.NumOfFloors){
 		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: FLOOR_OUT_OF_RANGE_FAIL")
 		return
-	} else if((buttonPushed.Button == Source.BUTTON_CALL_UP) && (buttonPushed.Floor == Source.NumOfFLoors -1)){
+	} else if((buttonPushed.Button == Source.BUTTON_CALL_UP) && (buttonPushed.Floor == Source.NumOfFloors -1)){
 		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
 		return
 	} else if((buttonPushed.Button == Source.BUTTON_CALL_DOWN) && (buttonPushed.Floor == 0)){
 		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
 		return
-	} else if((buttonPushed.Button != Source.BUTTON_CALL_UP) && (buttonPushed.Button != Source.BUTTON_CALL_DOWN) && (buttonPushed.Button != Source.BUTTON_COMMAND){
+	} else if((buttonPushed.Button != Source.BUTTON_CALL_UP) && (buttonPushed.Button != Source.BUTTON_CALL_DOWN) && (buttonPushed.Button != Source.BUTTON_COMMAND)){
 		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
 		return
 	}
@@ -170,19 +170,19 @@ func elev_get_button_signal(button int, floor int) int{
 
 	if(floor < 0){
 		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: FLOOR_OUT_OF_RANGE_FAIL")
-		return
-	} else if(floor >= Source.NumOfFLoors){
+		return -1
+	} else if(floor >= Source.NumOfFloors){
 		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: FLOOR_OUT_OF_RANGE_FAIL")
-		return
-	} else if((button == Source.BUTTON_CALL_UP) && (floor == Source.NumOfFLoors -1)){
+		return -1
+	} else if((button == Source.BUTTON_CALL_UP) && (floor == Source.NumOfFloors -1)){
 		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: FLOOR_OUT_OF_RANGE_FAIL")
-		return
+		return -1
 	} else if((button == Source.BUTTON_CALL_DOWN) && (floor == 0)){
 		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXSISTING_BUTTON_FAIL")
-		return
+		return -1
 	} else if((button != Source.BUTTON_CALL_UP) && (button != Source.BUTTON_CALL_DOWN) && (button != Source.BUTTON_COMMAND)){
 		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXSISTING_BUTTON_FAIL")
-		return 
+		return -1
 	}
 
 	if(io_read_bit(button_channel_matrix[floor][button]) != 0){
@@ -194,9 +194,9 @@ func elev_get_button_signal(button int, floor int) int{
 
 func readButtons(NewOrderChannel chan Source.ButtonMessage) {
 	var buttonPressed Source.ButtonMessage
-	lastButtonPressed := Source.ButtonMessage{-1, -1, -1}
+	//lastButtonPressed := Source.ButtonMessage{-1, -1, -1}
 	for{   
-		time.Sleep(50*time.Millisecond) 	
+		time.Sleep(80*time.Millisecond) 	
 		buttonPressed.Floor = -1
 		for  floor := 0; floor < Source.NumOfFloors-1 ; floor++  {
    
@@ -209,18 +209,18 @@ func readButtons(NewOrderChannel chan Source.ButtonMessage) {
 			} 
 		} 
     
-		for floor := 0; floor < Source.NumOfFLoors; floor++ {
+		for floor := 0; floor < Source.NumOfFloors; floor++ {
         
 			if ( elev_get_button_signal( Source.BUTTON_COMMAND, floor ) == 1 ) {
-				for ; elev_get_button_signal( Source.BUTTON_COMMAND, floor ) == 1 ; {
-				}
+				//for ; elev_get_button_signal( Source.BUTTON_COMMAND, floor ) == 1 ; {
+				//}
 				buttonPressed.Floor =  floor
 				buttonPressed.Button = Source.BUTTON_COMMAND
 			}
 		}
 	
-		if (buttonPressed.Floor != -1 && lastButtonPressed != buttonPressed) {
-			lastButtonPressed = buttonPressed
+		if (buttonPressed.Floor != -1 /*&& lastButtonPressed != buttonPressed*/) {
+			//lastButtonPressed = buttonPressed
 			NewOrderChannel <- buttonPressed
 		}
 	}

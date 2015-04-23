@@ -6,22 +6,11 @@ import(
 	"driver"
 	"Queue"	
 	"Source"
-
+	"FileHandler"
+	"time"
+	"fmt"
 )
 
-func errorHandling(elevatorID int){
-	defer Elevator(elevatorID)
-	for{
-		select{
-			case err := <- Source.ErrorChannel:
-				if( err != nil){
-					//SKRIV TIL LOGG
-					panic(err)
-					return
-				}
-		}
-	}
-}
 
 func Elevator(elevatorID int){
 
@@ -46,7 +35,7 @@ func Elevator(elevatorID int){
 	setButtonLightChannel := make(chan Source.ButtonMessage,1) 
 	initFinished := make(chan int)
 	//Queue
-	addOrderChannel := make(chan Source.ButtonMessage,1)
+	addOrderChannel := make(chan Source.ButtonMessage, 1)
 	removeOrderChannel := make(chan int, 1)
 	nextOrderChannel := make(chan int, 1)
 	checkOrdersChannel := make(chan int, 1)
@@ -59,12 +48,13 @@ func Elevator(elevatorID int){
 	//UDP
 
 	completedOrderChannel := make(chan Source.ButtonMessage, 1)
-	externalOrderChannel := make(chan Source.ButtonMessage, 1)
+	externalOrderChannel := make(chan Source.ButtonMessage, 10)
 	handleOrderChannel := make(chan Source.Message, 1)
-	removeExternalOrderChannel := make(chan Source.Message, 1)
 	bestElevatorChannel := make(chan Source.Message, 1)
 	removeElevatorChannel := make(chan int, 1)
 	nextOrderedFloor := 100
+
+	
 
 	go errorHandling(elevatorStatus.ID)
 	go Source.SourceInit()
@@ -73,9 +63,10 @@ func Elevator(elevatorID int){
 	println("Finished inting")
   	go Queue.Queue(elevatorStatus, addOrderChannel, removeOrderChannel, nextOrderChannel, checkOrdersChannel, orderInEmptyQueue, finishedRemoving, fromElevToQueue, bestElevatorChannel, removeElevatorChannel, completedOrderChannel, orderRemovedChannel, requestQueueChannel, receiveQueueChannel)
    	go handleOrders(elevatorStatus.ID, addOrderChannel , setButtonLightChannel, newOrderChannel, externalOrderChannel, handleOrderChannel, fromElevToQueue, orderRemovedChannel, completedOrderChannel)
-	go Network.Slave(elevatorStatus, externalOrderChannel, updateElevatorInfoChannel, handleOrderChannel, removeExternalOrderChannel, bestElevatorChannel, removeElevatorChannel, completedOrderChannel, requestQueueChannel, receiveQueueChannel)
-	
+	go Network.Slave(elevatorStatus, externalOrderChannel, updateElevatorInfoChannel, handleOrderChannel, bestElevatorChannel, removeElevatorChannel, completedOrderChannel, requestQueueChannel, receiveQueueChannel)
 
+	go readFromBackup(newOrderChannel)
+	
 	//run <- 1
 	prevFloor := 10
 
@@ -91,6 +82,8 @@ func Elevator(elevatorID int){
 				nextOrder := <- nextOrderChannel
 				nextOrderedFloor = nextOrder
 				direction := prevFloor - elevatorStatus.CurrentFloor
+
+				fmt.Println("\x1b[31;1mNextOrder: \x1b[0m", nextOrderedFloor)
 
 				if(direction < 0){
 					elevatorStatus.Direction = Source.UP
@@ -138,7 +131,7 @@ func Elevator(elevatorID int){
 				checkOrdersChannel <- elevatorStatus.CurrentFloor
 				orderedFloor := <- nextOrderChannel
 				nextOrderedFloor = orderedFloor
-				//println("ELEVATOR :RUN ORDER: ", nextOrderedFloor)
+				println("\x1b[31;1mELEVATOR :NEXT ORDER: \x1b[0m", nextOrderedFloor)
 				if(nextOrderedFloor == -1){
 					break
 				}else{
@@ -169,10 +162,8 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 					setButtonLightChannel <- newOrder
 				} else{
 					externalOrderChannel <- newOrder
-					setButtonLightChannel <- newOrder
 				}
 			case newExternalOrder := <- handleOrderChannel:	
-				println("New ext update is", newExternalOrder.UpdatedElevInfo)
 				fromElevToQueue <- newExternalOrder  
 				if(newExternalOrder.CompletedOrder && elevatorID != newExternalOrder.MessageTo){
 					newExternalOrder.Button.Value = 0
@@ -188,6 +179,32 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 					fromElevToQueue <- Source.Message{false, false, false, true, false, elevatorID, -1, Source.ElevatorInfo{elevatorID, -1, -1}, orderRemoved}
 				}
 				setButtonLightChannel <- orderRemoved
+		}
+	}
+}
+
+
+func readFromBackup(newOrderChannel chan Source.ButtonMessage) {
+	dummy := 0
+	q := FileHandler.Read(&dummy, &dummy)
+		
+	for j:=0; j < len(q); j+=2 {
+		order := Source.ButtonMessage{q[j],q[j+1], 1}
+		newOrderChannel <- order
+		time.Sleep(20*time.Millisecond)
+	}
+}
+
+func errorHandling(elevatorID int){
+	//defer Elevator(elevatorID)
+	for{
+		select{
+			case err := <- Source.ErrorChannel:
+				if( err != nil){
+					FileHandler.ErrorLog(err)
+					panic(err)
+					return
+				}
 		}
 	}
 }

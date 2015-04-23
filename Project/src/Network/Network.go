@@ -33,10 +33,9 @@ func recieveUdpMessage(master bool, responseChannel chan Source.Message, termina
 				return
 			default:
 				
-				mlen , _, err := recievesock.ReadFromUDP(buffer)
-				Source.ErrorChannel <- err
+				mlen , _, _ := recievesock.ReadFromUDP(buffer)
+				//Source.ErrorChannel <- err
 				if(mlen > 0){
-					println("RECEIVEEEE")
 					err := json.Unmarshal(buffer[:mlen], &recMsg)
 					Source.ErrorChannel <- err
 					responseChannel <- recMsg
@@ -53,7 +52,6 @@ func sendUdpMessage(msg Source.Message){
 	if(msg.FromMaster){
 		baddr,err = net.ResolveUDPAddr("udp", "129.241.187.255:26969")
 	}
-	println("MSG", msg.UpdatedElevInfo)
 	sendSock, err := net.DialUDP("udp", nil ,baddr) // connection
 	
 	buf, err:= json.Marshal(msg)
@@ -134,10 +132,16 @@ func Slave(elevator Source.ElevatorInfo, externalOrderChannel chan Source.Button
 				
 			//Skifter retn. el. etg.: 
 			case elevatorInfo :=  <- updateElevatorInfoChannel:
+				elevator = elevatorInfo
 				println("Sending elev info from salve")
-				updatedElevInfo := Source.Message{false, false, false, false, true, elevator.ID, -1, elevatorInfo, Source.ButtonMessage{0,0,0}}
+				updatedElevInfo := Source.Message{false, false, false, false, true, elevator.ID, -1, elevator, Source.ButtonMessage{0,0,0}}
 				sendUdpMessage(updatedElevInfo)
 				handleOrderChannel <- updatedElevInfo
+
+			case <- time.After(time.Second):
+				sendUdpMessage(Source.Message{false, false, false, false, true, elevator.ID, -1, elevator, Source.ButtonMessage{0,0,0}})
+					 
+
 		}
 	}
 }
@@ -153,37 +157,31 @@ func master( elevator Source.ElevatorInfo, externalOrderChannel chan Source.Butt
 	terminatedFromMaster := make(chan int, 1)
 	terminateFromSlave := make(chan bool, 1)
 	terminatedFromSlave := make(chan int, 1)
+
+	done := make(chan int,1)	
+
 	go recieveUdpMessage(false, messageFromMasterChannel, terminateFromMaster, terminatedFromMaster)
 	go recieveUdpMessage(true, messageFromSlaveChannel, terminateFromSlave, terminatedFromSlave)
 
 	for {
 		select{
-
+			
 			case messageFromMaster := <- messageFromMasterChannel:
-				println("TO MASTERAA", messageFromMaster.MessageFrom)
-				if(messageFromMaster.MessageFrom < elevator.ID){
-						fmt.Println("\x1b[31;1mEVIG RUNDDANS?????????!\x1b[0m")
-						requestQueueChannel <- 1
-						sendQueue: 
-						for {
-							select {
-								case order := <-receiveQueueChannel:
-									if (order.MessageTo == -1) {
-										break sendQueue
-									}
-									sendUdpMessage(order)
-							}
-						}
-
+				if (messageFromMaster.AcceptedOrder && !messageFromMaster.NewOrder){
+					handleOrderChannel <- messageFromMaster
+				}else{
+					
+						println("TO MASTERAA", messageFromMaster.MessageFrom)
+						go msgFromMaster(messageFromMaster, elevator, requestQueueChannel, receiveQueueChannel, done)
+						<- done
 						terminateFromSlave <- true
 						terminateFromMaster <- true
 						<- terminatedFromSlave
 						<- terminatedFromMaster
 						go Slave( elevator, externalOrderChannel, updateElevatorInfoChannel, handleOrderChannel, bestElevatorChannel, removeElevator, completedOrderChannel, requestQueueChannel, receiveQueueChannel)	
-						return	
-				} else if (messageFromMaster.AcceptedOrder && !messageFromMaster.NewOrder){
-					handleOrderChannel <- messageFromMaster
-				}
+						return
+				}	
+
 			case messageFromSlave := <- messageFromSlaveChannel:
 				println("MESSAGE FROM SLAVE", messageFromSlave.UpdatedElevInfo)
 				handleOrderChannel <- messageFromSlave
@@ -209,6 +207,7 @@ func master( elevator Source.ElevatorInfo, externalOrderChannel chan Source.Butt
 					distributedOrder.AcceptedOrder = true
 					handleOrderChannel <- distributedOrder
 					sendUdpMessage(distributedOrder)
+					<- messageFromMasterChannel	
 					break
 				}
 				sendUdpMessage(distributedOrder)
@@ -248,10 +247,60 @@ func master( elevator Source.ElevatorInfo, externalOrderChannel chan Source.Butt
 
 			case elevatorInfo :=  <- updateElevatorInfoChannel:
 				println("SENDING UPDATE")
+				elevator = elevatorInfo
 				sendUdpMessage(Source.Message{false, false, true, false, true, elevator.ID, -1, elevatorInfo, Source.ButtonMessage{0,0,0}})
 				<- messageFromMasterChannel
 				handleOrderChannel <- Source.Message{false, false, true, false, true, elevator.ID, -1, elevatorInfo, Source.ButtonMessage{0,0,0}} 
+			
+			case <- time.After(1500*time.Millisecond):
+				println("TIMEOUT MASTER")
+				removeElevator <- -1
+				sendUdpMessage(Source.Message{false, false, true, false, true, elevator.ID, -1, elevator, Source.ButtonMessage{0,0,0}})
+				<-messageFromMasterChannel
 
      	}      
     }
 }
+
+
+func msgFromMaster(messageFromMaster Source.Message, elevator Source.ElevatorInfo, requestQueueChannel chan int, receiveQueueChannel chan Source.Message, done chan int){
+	
+	if(messageFromMaster.MessageFrom < elevator.ID){
+		fmt.Println("\x1b[31;1mEVIG RUNDDANS?????????!\x1b[0m")
+		requestQueueChannel <- 1
+		sendQueue: 
+		for {
+			select {
+				case order := <-receiveQueueChannel:
+					if (order.MessageTo == -1) {
+						break sendQueue
+					}
+					sendUdpMessage(order)
+			}
+		}
+	done <- 1
+	
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
