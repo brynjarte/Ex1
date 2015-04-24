@@ -6,6 +6,7 @@ import (
 	"time"
 	"FileHandler"
 	"fmt"
+	"strconv"
 )
 
 
@@ -97,8 +98,8 @@ func Queue(elevatorInfo Source.ElevatorInfo, addOrderChannel chan Source.ButtonM
 func getExternalQueues(elevator Source.ElevatorInfo, requestQueueChannel chan int, receiveQueueChannel chan Source.Message) {
 	queueMessage := Source.Message{false, true, false, false, false, elevator.ID, -1, elevator, Source.ButtonMessage{-1,-1,-1}, allExternalQueues}	
 	for elev := range allExternalQueues {
-		if (elev != elevator.ID) {
-			queueMessage.MessageTo = elev 
+		if (strconv.Atoi(elev) != elevator.ID) {
+			queueMessage.MessageTo = strconv.Atoi(elev) 
 			receiveQueueChannel <- queueMessage
 		}
 	}
@@ -421,9 +422,9 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 func mergeExternalQueues(extQueue map[int][]Source.ButtonMessage) {
 	
 	for elev := 0; elev < Source.NumOfElevs; elev++ {
-		temp := allExternalQueues[elev]
+		temp := allExternalQueues[fmt.Sprint(elev)]
 		if (temp == nil) {
-			allExternalQueues[elev] = append(allExternalQueues[elev], extQueue[elev]...)
+			allExternalQueues[fmt.Sprint(elev)] = append(allExternalQueues[fmt.Sprint(elev)], extQueue[elev]...)
 		}
 	}
 }
