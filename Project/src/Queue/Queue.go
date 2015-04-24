@@ -421,7 +421,7 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 
 func mergeExternalQueues(extQueue map[int][]Source.ButtonMessage) {
 	
-	for elev := 0; elev < Source.NumOfElevs; elev++ {
+	for elev := range extQueue {
 		temp := allExternalQueues[fmt.Sprint(elev)]
 		if (temp == nil) {
 			allExternalQueues[fmt.Sprint(elev)] = append(allExternalQueues[fmt.Sprint(elev)], extQueue[fmt.Sprint(elev)]...)
