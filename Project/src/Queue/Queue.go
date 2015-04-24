@@ -424,7 +424,7 @@ func mergeExternalQueues(extQueue map[int][]Source.ButtonMessage) {
 	for elev := 0; elev < Source.NumOfElevs; elev++ {
 		temp := allExternalQueues[fmt.Sprint(elev)]
 		if (temp == nil) {
-			allExternalQueues[fmt.Sprint(elev)] = append(allExternalQueues[fmt.Sprint(elev)], extQueue[elev]...)
+			allExternalQueues[fmt.Sprint(elev)] = append(allExternalQueues[fmt.Sprint(elev)], extQueue[fmt.Sprint(elev)]...)
 		}
 	}
 }
