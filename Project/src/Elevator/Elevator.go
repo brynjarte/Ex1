@@ -164,6 +164,17 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 					externalOrderChannel <- newOrder
 				}
 			case newExternalOrder := <- handleOrderChannel:	
+				if (newExternalOrder.AllExternalOrders != nil) {
+					for elev := range newExternalOrder.AllExternalOrders {
+						if (elev != fmt.Sprint(elevatorID)) {
+							for order := 0; order < len(newExternalOrder.AllExternalOrders[elev]); order++ {
+								setButtonLightChannel <- newExternalOrder.AllExternalOrders[elev][order]
+							}
+						}
+					}
+					fromElevToQueue <- newExternalOrder
+					break
+				}
 				fromElevToQueue <- newExternalOrder  
 				if(newExternalOrder.CompletedOrder && elevatorID != newExternalOrder.MessageTo){
 					newExternalOrder.Button.Value = 0
