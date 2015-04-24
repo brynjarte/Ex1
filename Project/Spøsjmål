@@ -2,10 +2,13 @@
 - OPPDAG OM ALENE
 - ERROR-HANDLING
 - //COST FUNCTION
+- //master detter ut, kjenner andre heisen andre køer?
 - //Slett ext lys om detter ut (alene) //ELLER IKKE? SPØR STUDASS eller kyrre
 - //Slett ext kø detter ut:
+- Forslag i removeElevator() for å fjerne lys etc.
+- Lys av når detter ut av nettverket.
 
-SJEKK REKKEFØLGE PÅ ARGUMANG
+
 
 3. endre navn på Elevator package
 - addorder første gang som slave (fra master)
@@ -15,6 +18,7 @@ SJEKK REKKEFØLGE PÅ ARGUMANG
 // TAR AV OG TIL DOBBELT OPP MED ORDERS.
 
 - Starter opp backup med externals
+
 
 - Sjekke kva me gje med inkommande meldingar i Queue
 
