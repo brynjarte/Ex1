@@ -108,7 +108,7 @@ func getExternalQueues(elevator Source.ElevatorInfo, requestQueueChannel chan in
 }
 
 func removeElevator(lostElevator int, elevatorInfo Source.ElevatorInfo, bestElevatorChannel chan Source.Message, addOrderChannel chan Source.ButtonMessage){
-	unDistributedOrder := Source.Message{true, false, false, false, false, -1, -1, elevatorInfo, Source.ButtonMessage{-1, -1, -1}}
+	unDistributedOrder := Source.Message{true, false, false, false, false, -1, -1, elevatorInfo, Source.ButtonMessage{-1, -1, -1}, nil}
 
 	if(lostElevator == -1){
 		for elev := range numOrdersInDirection {
@@ -408,9 +408,9 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 	}
 
 	if(bestElevator != myElevatorID){	
-		bestElevatorChannel <- Source.Message{true, false, true, false, false, myElevatorID, bestElevator, order.ElevInfo, order.Button}
+		bestElevatorChannel <- Source.Message{true, false, true, false, false, myElevatorID, bestElevator, order.ElevInfo, order.Button, nil}
 	}else if (bestElevator == myElevatorID){
-		bestElevatorChannel <- Source.Message{true, false, true, false, false, myElevatorID, bestElevator, order.ElevInfo, order.Button}
+		bestElevatorChannel <- Source.Message{true, false, true, false, false, myElevatorID, bestElevator, order.ElevInfo, order.Button, nil}
 		go recieveExternalQueue(myElevatorID, order.Button)
 		addOrderChannel <- order.Button
 	}
