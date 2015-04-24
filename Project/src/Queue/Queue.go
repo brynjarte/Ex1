@@ -95,11 +95,10 @@ func Queue(elevatorInfo Source.ElevatorInfo, addOrderChannel chan Source.ButtonM
 }
 
 func getExternalQueues(elevator Source.ElevatorInfo, requestQueueChannel chan int, receiveQueueChannel chan Source.Message) {
-	queueMessage := Source.Message{false, true, false, false, false, elevator.ID, -1, elevator, Source.ButtonMessage{-1,-1,-1}}	
+	queueMessage := Source.Message{false, true, false, false, false, elevator.ID, -1, elevator, Source.ButtonMessage{-1,-1,-1}, allExternalQueues}	
 	for elev := range allExternalQueues {
-		queueMessage.MessageTo = elev 
-		for orders := 0; orders < len(allExternalQueues[fmt.Sprint(elev)]); orders++ {
-			queueMessage.Button = allExternalQueues[fmt.Sprint(elev)][orders]
+		if (elev != elevator.ID) {
+			queueMessage.MessageTo = elev 
 			receiveQueueChannel <- queueMessage
 		}
 	}
@@ -418,7 +417,7 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 		
 }
 
-/*
+
 func mergeExternalQueues(extQueue map[int][]Source.ButtonMessage) {
 	
 	for elev := 0; elev < Source.NumOfElevs; elev++ {
@@ -429,7 +428,7 @@ func mergeExternalQueues(extQueue map[int][]Source.ButtonMessage) {
 	}
 }
 
-*/
+
 
 
 
