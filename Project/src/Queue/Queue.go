@@ -63,6 +63,9 @@ func Queue(elevatorInfo Source.ElevatorInfo, addOrderChannel chan Source.ButtonM
 				go updateElevInfo(elevatorInfo)
 
 			case newUpdate := <- fromUdpToQueue:
+				if (newUpdate.AllExternalOrders != nil) {
+					go mergeExternalQueues(newUpdate.AllExternalOrders)
+				}
 				if(newUpdate.FromMaster){	
 					if(newUpdate.NewOrder && newUpdate.MessageTo == elevatorInfo.ID){
 						addOrderChannel <- newUpdate.Button
@@ -419,19 +422,34 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 }
 
 
-func mergeExternalQueues(extQueue map[int][]Source.ButtonMessage) {
+func mergeExternalQueues(extQueue map[string][]Source.ButtonMessage) {
 	
 	for elev := range extQueue {
-		temp := allExternalQueues[fmt.Sprint(elev)]
-		if (temp == nil) {
-			allExternalQueues[fmt.Sprint(elev)] = append(allExternalQueues[fmt.Sprint(elev)], extQueue[fmt.Sprint(elev)]...)
+		temp := allExternalQueues[elev]
+		if (temp == nil ) {
+			for order := range extQueue[elev] {
+				allExternalQueues[elev] = append(allExternalQueues[elev], order])
+				go receiveExternalQueue(strconv.Atoi(elev), order)
+			}
+		} else {
+			for order := range extQueue[elev] {
+				if (!orderInQueue(order, elev) {
+					allExternalQueues[elev] = append(allExternalQueues[elev], order])
+					go receiveExternalQueue(strconv.Atoi(elev), order)
+				}
+			}
 		}
 	}
 }
 
-
-
-
+func orderInQueue(elevatorID string, order Source.ButtonMessage) bool {
+    for oldOrder := 0; oldOrder < len(allExternalQueues[elevatorID]); oldOrder++ {
+        if equalOrders(allExternalQueues[oldOrder], order) {
+            return true
+        }
+    }
+    return false
+}
 
 func saveQueue() {
 	
