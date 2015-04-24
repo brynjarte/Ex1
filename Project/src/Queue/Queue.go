@@ -96,7 +96,7 @@ func Queue(elevatorInfo Source.ElevatorInfo, addOrderChannel chan Source.ButtonM
 }
 
 func getExternalQueues(elevator Source.ElevatorInfo, requestQueueChannel chan int, receiveQueueChannel chan Source.Message) {
-	queueMessage := Source.Message{false, true, false, false, false, elevator.ID, -1, elevator, Source.ButtonMessage{-1,-1,-1}, allExternalQueues}	
+	queueMessage := Source.Message{false, false, false, false, false, elevator.ID, -1, elevator, Source.ButtonMessage{-1,-1,-1}, allExternalQueues}	
 	for elev := range allExternalQueues {
 		if (strconv.Atoi(elev) != elevator.ID) {
 			queueMessage.MessageTo = strconv.Atoi(elev) 
