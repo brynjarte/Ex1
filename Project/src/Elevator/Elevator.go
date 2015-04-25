@@ -28,7 +28,7 @@ func Elevator(elevatorID int){
 
 	//driver
 	newOrderChannel := make(chan Source.ButtonMessage,1)
-	floorReachedChannel := make(chan int, 1)
+	floorReachedChannel := make(chan int)
 	setSpeedChannel := make(chan int, 1)
 	stopChannel := make(chan int, 1)
 	stoppedChannel := make(chan int, 1)
@@ -145,6 +145,7 @@ func Elevator(elevatorID int){
 				}
 
             case <- orderInEmptyQueue:
+				println("\x1b[33;1mOrder in empty queueueue\x1b[0m")
 				run <- 1
 
 		}
@@ -187,7 +188,7 @@ func handleOrders(elevatorID int, addOrderChannel chan Source.ButtonMessage, set
 				orderRemoved.Value = 0
 				if (orderRemoved.Button != Source.BUTTON_COMMAND) {
 					completedOrderChannel <- orderRemoved
-					fromElevToQueue <- Source.Message{false, false, false, true, false, elevatorID, -1, Source.ElevatorInfo{elevatorID, -1, -1}, orderRemoved}
+					fromElevToQueue <- Source.Message{false, false, false, true, false, elevatorID, -1, Source.ElevatorInfo{elevatorID, -1, -1}, orderRemoved, nil}
 				}
 				setButtonLightChannel <- orderRemoved
 		}

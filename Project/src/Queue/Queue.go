@@ -378,6 +378,14 @@ func updateElevInfo(newElevInfo Source.ElevatorInfo){
 func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChannel chan Source.Message, addOrderChannel chan Source.ButtonMessage){
 	bestElevator := myElevatorID
 	bestCost := 100
+
+	for elevator := range allExternalQueues {
+		for ord := range allExternalQueues[elevator] {
+			if (equalOrders(allExternalQueues[elevator][ord], order.Button)) {
+				return			
+			} 
+		}
+	}
 	calculateCost:
 	for elevator := range allElevatorsInfo{
 		println("Elevator nr. ", elevator)
