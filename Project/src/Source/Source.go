@@ -42,10 +42,8 @@ type ElevatorInfo struct {
 	ID int	
 	CurrentFloor int
 	Direction int
-	//numberInQueue int
 }
 
 func SourceInit() {
 	FileHandler.Read(&NumOfElevs, &NumOfFloors)	
-	println("NF", NumOfFloors,"\nNE",NumOfElevs)
 }

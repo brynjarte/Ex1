@@ -12,8 +12,9 @@ func Read(NumOfElevs *int, NumOfFloors *int) [] int{
 	if err != nil {
 		*NumOfElevs = 3
 		*NumOfFloors = 4
+		fmt.Println(err)
+		ErrorLog(err)
 		return nil
-		panic(err)
 	}
 	
 	defer func() {
@@ -62,19 +63,18 @@ func Read(NumOfElevs *int, NumOfFloors *int) [] int{
 }
 
 func Write(numOfElevs int, numOfFloors int, length int, queue []int) {
-	fo, err := os.Create("backup.txt")
+    fo, err := os.Create("backup.txt")
     if err != nil {
         panic(err)
     }
-    println("Saving QUEUE")
+
     defer func() {
     	if err := fo.Close(); err != nil {
     		panic(err)
     	}
     }()
 
-   
-	if _, err := fmt.Fprintf(fo,"%d\n",numOfElevs); err != nil {
+    if _, err := fmt.Fprintf(fo,"%d\n",numOfElevs); err != nil {
             panic(err)
     }
             
@@ -86,16 +86,14 @@ func Write(numOfElevs int, numOfFloors int, length int, queue []int) {
             panic(err)
     }
     
-	for i := 0;i < len(queue);i+=2{
-	        // write a chunk
-        	if _, err := fmt.Fprintf(fo,"%d\t",queue[i]); err != nil {
-        	    panic(err)
-        	}
-        	if _, err := fmt.Fprintf(fo,"%d\n",queue[i+1]); err != nil {
-        	    panic(err)
-        	}
-	}
-	
+    for i := 0;i < len(queue);i+=2{
+        if _, err := fmt.Fprintf(fo,"%d\t",queue[i]); err != nil {
+            panic(err)
+        }
+        if _, err := fmt.Fprintf(fo,"%d\n",queue[i+1]); err != nil {
+            panic(err)
+        }
+    }
 }
 
 func ErrorLog(occuredError error) {
@@ -115,9 +113,9 @@ func ErrorLog(occuredError error) {
 
 	if _, err = fmt.Fprintf(fe,"Error occured at time %s \nError type:\t", timestamp); err != nil {
 		panic(err)
-    	}
+    }
     	
-    	if _, err = fmt.Fprintf(fe,"%s\n\n",occuredError); err != nil {
+    if _, err = fmt.Fprintf(fe,"%s\n\n",occuredError); err != nil {
 		panic(err)
-    	}
+    }
 }

@@ -6,11 +6,10 @@ import (
 
 func main() {
 	
-	someChannel := make(chan int,1)
+	runningElevator := make(chan int,1)
 
-	go Elevator.Elevator()
+	go Elevator.RunElevator()
 
-	<- someChannel
-	
+	<- runningElevator
 }
 

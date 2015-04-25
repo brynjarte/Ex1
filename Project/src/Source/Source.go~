@@ -35,6 +35,7 @@ type Message struct{
 
 	ElevInfo ElevatorInfo
 	Button ButtonMessage
+	AllExternalOrders map[string] []ButtonMessage
 }
 
 type ElevatorInfo struct {
