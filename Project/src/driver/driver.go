@@ -146,13 +146,13 @@ func elev_set_button_lamp(buttonPushed Source.ButtonMessage){
 		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: FLOOR_OUT_OF_RANGE_FAIL")
 		return
 	} else if((buttonPushed.Button == Source.BUTTON_CALL_UP) && (buttonPushed.Floor == Source.NumOfFloors -1)){
-		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXISTING_BUTTON_FAIL")
 		return
 	} else if((buttonPushed.Button == Source.BUTTON_CALL_DOWN) && (buttonPushed.Floor == 0)){
-		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXISTING_BUTTON_FAIL")
 		return
 	} else if((buttonPushed.Button != Source.BUTTON_CALL_UP) && (buttonPushed.Button != Source.BUTTON_CALL_DOWN) && (buttonPushed.Button != Source.BUTTON_COMMAND)){
-		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL")
+		Source.ErrorChannel <- errors.New("ELEV_SET_BUTTON_LAMP: NON_EXISTING_BUTTON_FAIL")
 		return
 	}
 
@@ -178,10 +178,10 @@ func elev_get_button_signal(button int, floor int) int{
 		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: FLOOR_OUT_OF_RANGE_FAIL")
 		return -1
 	} else if((button == Source.BUTTON_CALL_DOWN) && (floor == 0)){
-		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXSISTING_BUTTON_FAIL")
+		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXISTING_BUTTON_FAIL")
 		return -1
 	} else if((button != Source.BUTTON_CALL_UP) && (button != Source.BUTTON_CALL_DOWN) && (button != Source.BUTTON_COMMAND)){
-		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXSISTING_BUTTON_FAIL")
+		Source.ErrorChannel <- errors.New("ELEV_GET_BUTTON_SIGNAL: NON_EXISTING_BUTTON_FAIL")
 		return -1
 	}
 
@@ -292,22 +292,6 @@ func stop(stoppedChannel chan int, direction int){
 	stoppedChannel <- 1
 
 }
-/*
-func closeDoor(stoppedChannel chan int, resetDoorChannel chan int){
-	
-	for{
-		select{
-			case <- time.After(3*time.Second):
-				elev_set_door_open_lamp(0)
-				stoppedChannel <- 1
-				<- resetDoorChannel
-			case <- resetDoorChannel:
-				//Reset door timer
-		}
-	}
-	return
-
-}*/
 
 func Drivers(newOrderChannel chan Source.ButtonMessage, floorReachedChannel chan int, setSpeedChannel chan int, stopChannel chan int, stoppedChannel chan int, setButtonLightChannel chan Source.ButtonMessage, initFinished chan int){
 

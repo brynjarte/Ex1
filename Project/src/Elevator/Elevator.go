@@ -9,13 +9,15 @@ import(
 	"FileHandler"
 	"time"
 	"fmt"
+	"net"
+	"errors"
 )
 
 
-func Elevator(elevatorID int){
-
-	elevatorStatus := Source.ElevatorInfo{elevatorID, -1, -1}
-
+func Elevator(){
+	
+	elevatorStatus := Source.ElevatorInfo{getID(), -1, -1}
+	println(elevatorStatus.ID)
 	//STATES
 	//EventHandler
 	updateElevatorInfoChannel := make(chan Source.ElevatorInfo,1)
@@ -25,6 +27,9 @@ func Elevator(elevatorID int){
 	run := make(chan int, 1)
 	stop := make(chan int, 1)
 	orderInEmptyQueue := make(chan int, 1)
+
+	noOrdersLeftChannel := make(chan int, 1)
+	removedOrder := make(chan int, 1)
 
 	//driver
 	newOrderChannel := make(chan Source.ButtonMessage,1)
@@ -91,11 +96,11 @@ func Elevator(elevatorID int){
 					elevatorStatus.Direction = Source.DOWN
 				}
 				
-				if(elevatorStatus.CurrentFloor < nextOrderedFloor && elevatorStatus.Direction == Source.DOWN){
+				/*if(elevatorStatus.CurrentFloor < nextOrderedFloor && elevatorStatus.Direction == Source.DOWN){
 					run <- 1
 				} else if(elevatorStatus.CurrentFloor > nextOrderedFloor && elevatorStatus.Direction == Source.UP){
 					run <- 1
-				}
+				}*/
 					
 				updateElevatorInfoChannel <- elevatorStatus
 				//println("currentFloor:", elevatorStatus.CurrentFloor, "\nOrderedFloor", nextOrderedFloor, "Direccion:", elevatorStatus.Direction)
@@ -120,6 +125,7 @@ func Elevator(elevatorID int){
 							removeOrderChannel <- elevatorStatus.CurrentFloor
 							println("Removing")
 							<- finishedRemoving
+							removedOrder <- 1
 							println("order removed")
 							run <- 1
 							break wait
@@ -133,6 +139,7 @@ func Elevator(elevatorID int){
 				nextOrderedFloor = orderedFloor
 				println("\x1b[31;1mELEVATOR :NEXT ORDER: \x1b[0m", nextOrderedFloor)
 				if(nextOrderedFloor == -1){
+					noOrdersLeftChannel <- 1
 					break
 				}else{
 					if(nextOrderedFloor > elevatorStatus.CurrentFloor){
@@ -146,6 +153,7 @@ func Elevator(elevatorID int){
 
             case <- orderInEmptyQueue:
 				println("\x1b[33;1mOrder in empty queueueue\x1b[0m")
+				go orderDeadline(noOrdersLeftChannel, removedOrder)
 				run <- 1
 
 		}
@@ -221,5 +229,34 @@ func errorHandling(elevatorID int){
 	}
 }
 
+func getID() int {
+	addrs, err := net.InterfaceAddrs()
+	Source.ErrorChannel <- err
+
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipv4 := ipnet.IP.To4(); ipv4 != nil {
+				return int(ipv4[3])															
+			}
+		}
+	} 	
+	err = errors.New("GETID: COULD_NOT_RETRIEVE_IP")
+	Source.ErrorChannel <- err
+	return -1
+}
 
 
+func orderDeadline(noOrders chan int, removedOrder chan int){
+
+	for{
+		select{
+			case <- noOrders:
+				return
+			case <- removedOrder:
+				break
+			case <- time.After(20*time.Second):
+				err := errors.New("ORDER_DEADLINE: TIMED_OUT")
+				Source.ErrorChannel <- err 
+		}
+	}
+}

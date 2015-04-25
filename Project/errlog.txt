@@ -7,3 +7,36 @@ Error type:	ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL
 Error occured at time 23-04-2015 23:24:18 CET 
 Error type:	ELEV_SET_BUTTON_LAMP: NON_EXSISTING_BUTTON_FAIL
 
+Error occured at time 25-04-2015 11:09:58 CET 
+Error type:	ELEV_SET_BUTTON_LAMP: FLOOR_OUT_OF_RANGE_FAIL
+
+Error occured at time 25-04-2015 11:12:12 CET 
+Error type:	ELEV_SET_BUTTON_LAMP: FLOOR_OUT_OF_RANGE_FAIL
+
+Error occured at time 25-04-2015 11:31:20 CET 
+Error type:	ELEV_SET_BUTTON_LAMP: FLOOR_OUT_OF_RANGE_FAIL
+
+Error occured at time 25-04-2015 13:00:41 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+
+Error occured at time 25-04-2015 13:09:15 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+
+Error occured at time 25-04-2015 13:10:36 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+
+Error occured at time 25-04-2015 13:13:42 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+
+Error occured at time 25-04-2015 13:14:46 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+
+Error occured at time 25-04-2015 13:47:04 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+
+Error occured at time 25-04-2015 13:50:27 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+
+Error occured at time 25-04-2015 14:26:53 CET 
+Error type:	ORDER_DEADLINE: TIMED_OUT
+

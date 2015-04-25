@@ -24,68 +24,73 @@ type linkedList struct{
 var numOrdersInDirection = make(map[int] [2]int)
 var allExternalQueues  = make(map[string] []Source.ButtonMessage)
 var allElevatorsInfo = make(map[int] Source.ElevatorInfo)
+var lastUpdatedElevatorsInfo = make(map[int] time.Time) 
 var queue = linkedList{nil,nil,0}
+var master bool
+func queueInit(elevator Source.ElevatorInfo, removeElevatorChannel chan int){
 
-
-func queueInit(elevator Source.ElevatorInfo){
-
-	updateElevInfo(elevator)
+	updateElevInfo(elevator.ID, elevator, removeElevatorChannel)
 }
 
 
 func Queue(elevatorInfo Source.ElevatorInfo, addOrderChannel chan Source.ButtonMessage, removeOrderChannel chan int, nextOrderChannel chan int, checkOrdersChannel chan int, orderInEmptyQueue chan int, finishedRemoving chan int, fromUdpToQueue chan Source.Message, bestElevatorChannel chan Source.Message, removeElevatorChannel chan int, completedOrderChannel chan Source.ButtonMessage, orderRemovedChannel chan Source.ButtonMessage, requestQueueChannel chan int, receiveQueueChannel chan Source.Message){
-
+	
 	direction := -1
 	deletedOrderChannel := make(chan Source.ButtonMessage, 1)
-	queueInit(elevatorInfo)
+	queueInit(elevatorInfo, removeElevatorChannel)
 
 	for{
+		println("\x1b[33;1mAllElevatorsInfo \x1b[0m", len( allElevatorsInfo))
 		select{
 			case newOrder := <- addOrderChannel:
-				go addOrder(elevatorInfo.ID, newOrder, elevatorInfo.CurrentFloor, elevatorInfo.Direction, orderInEmptyQueue)
+				go addOrder(elevatorInfo, newOrder, orderInEmptyQueue)
 			
 			case <- removeOrderChannel: 
-				go removeOrder(finishedRemoving, orderRemovedChannel, deletedOrderChannel)				
+				go removeOrder(finishedRemoving, orderRemovedChannel, deletedOrderChannel)
+								
 	
 			case floor := <- checkOrdersChannel:
 				
-				//println("QUEUE: CHECKORDER DIRECTION:", elevatorInfo.Direction)
 				elevatorInfo.CurrentFloor = floor
 				nextOrderedFloor := checkOrders()
 				nextOrderChannel <- nextOrderedFloor
-				//println("Next or floor", nextOrderedFloor)
 				direction = nextOrderedFloor - elevatorInfo.CurrentFloor
-				if(direction > 0){
+				if(direction > 0 || elevatorInfo.CurrentFloor == 0){
 					elevatorInfo.Direction = Source.UP
-				}else if (direction < 0){
+				}else if (direction < 0 || elevatorInfo.CurrentFloor == Source.NumOfFloors-1){
 					elevatorInfo.Direction = Source.DOWN
 				}
-				go updateElevInfo(elevatorInfo)
+				go updateElevInfo(elevatorInfo.ID, elevatorInfo, removeElevatorChannel)
 
 			case newUpdate := <- fromUdpToQueue:
 				if (newUpdate.AllExternalOrders != nil) {
 					go mergeExternalQueues(newUpdate.AllExternalOrders)
 				}
 				if(newUpdate.FromMaster){	
+					master = false
+					println("\x1b[33;1mMASTER FALSE \x1b[0m")
 					if(newUpdate.NewOrder && newUpdate.MessageTo == elevatorInfo.ID){
 						addOrderChannel <- newUpdate.Button
-						go receiveExternalQueue(newUpdate.MessageTo, newUpdate.Button)
-					} else if (!newUpdate.NewOrder && newUpdate.AcceptedOrder) {
+						go receiveExternalQueue(elevatorInfo.ID, newUpdate.Button)
+					} else if (newUpdate.AcceptedOrder) {
 						go receiveExternalQueue(newUpdate.MessageFrom, newUpdate.Button)
 					} else if( newUpdate.CompletedOrder && newUpdate.MessageTo != elevatorInfo.ID){
 						go receiveExternalQueue(newUpdate.MessageFrom, newUpdate.Button)
-					} else if (newUpdate.UpdatedElevInfo && newUpdate.MessageTo != elevatorInfo.ID){
-						go updateElevInfo(newUpdate.ElevInfo)
-					} //else if(newUpdate.ExternalQueue != nil){
-						//mergeExternalQueues(newUpdate.ExternalQueue)
-					//}
+					} else if (newUpdate.UpdatedElevInfo){
+						go updateElevInfo(elevatorInfo.ID, newUpdate.ElevInfo, removeElevatorChannel)
+					} 
 				} else{
-					if(newUpdate.NewOrder ){
+					master = true
+					println("\x1b[33;1mMASTER TRUE \x1b[0m")
+					if(newUpdate.NewOrder){
 						go findBestElevator(elevatorInfo.ID, newUpdate, bestElevatorChannel, addOrderChannel)
-					} else if(newUpdate.AcceptedOrder || newUpdate.CompletedOrder){ 
+					} else if(newUpdate.AcceptedOrder || newUpdate.CompletedOrder ){ 
+						println("\x1b[35;1mGO train, rec. legger til order? \x1b[0m")
 						go receiveExternalQueue(newUpdate.MessageFrom, newUpdate.Button) 
-					}  else if (newUpdate.UpdatedElevInfo){
-						go updateElevInfo(newUpdate.ElevInfo)
+					} else if (newUpdate.UpdatedElevInfo){
+						go updateElevInfo(elevatorInfo.ID, newUpdate.ElevInfo, removeElevatorChannel)
+					} else if(newUpdate.AllExternalOrders != nil){
+						mergeExternalQueues(newUpdate.AllExternalOrders)
 					}	
 				
 				}
@@ -93,40 +98,36 @@ func Queue(elevatorInfo Source.ElevatorInfo, addOrderChannel chan Source.ButtonM
 				go removeElevator(lostElevator, elevatorInfo, bestElevatorChannel, addOrderChannel)
 
 			case <- requestQueueChannel:
-				go getExternalQueues(elevatorInfo, requestQueueChannel, receiveQueueChannel)
+				queueMessage := Source.Message{false, false, false, false, false, elevatorInfo.ID, -1, elevatorInfo, Source.ButtonMessage{-1,-1,-1}, allExternalQueues}	
+				receiveQueueChannel <- queueMessage
 		}
 	}
 }
 
-func getExternalQueues(elevator Source.ElevatorInfo, requestQueueChannel chan int, receiveQueueChannel chan Source.Message) {
-	queueMessage := Source.Message{false, false, false, false, false, elevator.ID, -1, elevator, Source.ButtonMessage{-1,-1,-1}, allExternalQueues}	
-	for elev := range allExternalQueues {
-		elevID, err := strconv.Atoi(elev)
-		Source.ErrorChannel <- err
-		if (elevID != elevator.ID) {
-			queueMessage.MessageTo = elevID 
-			receiveQueueChannel <- queueMessage
-		}
-	}
-	queueMessage.MessageTo = -1
-	receiveQueueChannel <- queueMessage
-}
 
 func removeElevator(lostElevator int, elevatorInfo Source.ElevatorInfo, bestElevatorChannel chan Source.Message, addOrderChannel chan Source.ButtonMessage){
 	unDistributedOrder := Source.Message{true, false, false, false, false, -1, -1, elevatorInfo, Source.ButtonMessage{-1, -1, -1}, nil}
 
+	temp := make(map [string][]Source.ButtonMessage)
+	for elev,orders := range allExternalQueues {
+		temp[elev] = orders
+
+	}  
 	if(lostElevator == -1){
-		for elev := range numOrdersInDirection {
-			if(elev != elevatorInfo.ID){
+		master = true
+		for elev := range allElevatorsInfo {
+			if(elev != elevatorInfo.ID){			
 				delete(numOrdersInDirection, elev)
 				delete(allElevatorsInfo, elev)
-				for orders := 0; orders < len(allExternalQueues[fmt.Sprint(elev)]); orders++ {
-					order := allExternalQueues[fmt.Sprint(elev)][orders]
+				delete(allExternalQueues, fmt.Sprint(elev))
+				for orders := 0; orders < len(temp[fmt.Sprint(elev)]); orders++ {
+					println("\x1b[33;1mSLETTER ORDRE \x1b[0m", lostElevator)
+					order := temp[fmt.Sprint(elev)][orders]
 					unDistributedOrder.Button = order
 					go findBestElevator(elev, unDistributedOrder, bestElevatorChannel, addOrderChannel)
 					time.Sleep(50*time.Microsecond)
 				}
-				delete(allExternalQueues, fmt.Sprint(elev))
+				
 			}
 		}
 		return
@@ -134,15 +135,16 @@ func removeElevator(lostElevator int, elevatorInfo Source.ElevatorInfo, bestElev
 
 	delete(numOrdersInDirection, lostElevator)
 	delete(allElevatorsInfo, lostElevator)
-	for orders := 0; orders < len(allExternalQueues[fmt.Sprint(lostElevator)]); orders++ {
-		order := allExternalQueues[fmt.Sprint(lostElevator)][orders]
+	delete(allExternalQueues, fmt.Sprint(lostElevator)) 
+	for orders := 0; orders < len(temp[fmt.Sprint(lostElevator)]); orders++ {
+		order := temp[fmt.Sprint(lostElevator)][orders]
 		unDistributedOrder.Button = order
 		go findBestElevator(lostElevator, unDistributedOrder, bestElevatorChannel, addOrderChannel)
 		time.Sleep(50*time.Microsecond)
 		
 	}		
 	
-	delete(allExternalQueues, fmt.Sprint(lostElevator)) 
+	
 }
 
 
@@ -154,7 +156,9 @@ func checkOrders() int {
 	}
 }
 
-func addOrder(elevatorID int, order Source.ButtonMessage, currentFloor int, movingDirection int, orderInEmptyQueue chan int) {
+func addOrder(elevator Source.ElevatorInfo, order Source.ButtonMessage, orderInEmptyQueue chan int) {
+	currentFloor := elevator.CurrentFloor
+	movingDirection := elevator.Direction
 
 	var newOrder = node{order, nil}
 	
@@ -287,6 +291,8 @@ func equalOrders(oldOrder Source.ButtonMessage, newOrder Source.ButtonMessage) b
 }
 
 func removeOrder(finishedRemoving chan int, orderRemovedChannel chan Source.ButtonMessage, deletedOrderChannel chan Source.ButtonMessage ) {
+	
+	
 	for {
 		if (queue.length > 1) {
 			if (queue.head.value.Floor == queue.head.next.value.Floor) {
@@ -316,7 +322,6 @@ func removeOrder(finishedRemoving chan int, orderRemovedChannel chan Source.Butt
 }
 
 func PrintQueue() {
-	//println("KØ: ", queue.length)
 	if queue.length == 0 {
 		return
 	}
@@ -330,7 +335,7 @@ func PrintQueue() {
 }
 
 func receiveExternalQueue(elevatorID int, button Source.ButtonMessage) {
-
+			println("\x1b[34;1mLEGGER TIL EXTERNAL \x1b[0m")
 	numUP := numOrdersInDirection[elevatorID][Source.UP]
 	numDOWN := numOrdersInDirection[elevatorID][Source.DOWN]
 	var temp [2] int
@@ -348,6 +353,7 @@ func receiveExternalQueue(elevatorID int, button Source.ButtonMessage) {
 			numOrdersInDirection[elevatorID] = temp
 		} else if (button.Button == Source.DOWN) {
 			temp[Source.DOWN]++
+			numOrdersInDirection[elevatorID] = temp
 		}
 		allExternalQueues[fmt.Sprint(elevatorID)] = append(allExternalQueues[fmt.Sprint(elevatorID)], button)
 	} else if (button.Value == 0 && button.Button != Source.BUTTON_COMMAND) {
@@ -359,6 +365,7 @@ func receiveExternalQueue(elevatorID int, button Source.ButtonMessage) {
 					numOrdersInDirection[elevatorID] = temp
 				} else if (button.Button == Source.DOWN) {
 					temp[Source.DOWN]--
+					numOrdersInDirection[elevatorID] = temp
 				}
 				return 			
 			}
@@ -366,13 +373,21 @@ func receiveExternalQueue(elevatorID int, button Source.ButtonMessage) {
 	}	
 }
 
-func updateElevInfo(newElevInfo Source.ElevatorInfo){
+
+func updateElevInfo(myElevatorID int, newElevInfo Source.ElevatorInfo, removeElevatorChannel chan int){
+	
 	if(newElevInfo.CurrentFloor == Source.NumOfFloors-1){
 		newElevInfo.Direction = Source.DOWN
 	} else if(newElevInfo.CurrentFloor == 0){
 		newElevInfo.Direction = Source.UP
 	}
+	lastUpdatedElevatorsInfo[newElevInfo.ID] = time.Now().Add(7*time.Second)
 	allElevatorsInfo[newElevInfo.ID] = newElevInfo 
+	for elevator := range lastUpdatedElevatorsInfo{
+	 	if(time.Now().After(lastUpdatedElevatorsInfo[elevator]) && elevator != myElevatorID && master){
+			removeElevatorChannel <- elevator
+		}
+	}
 }
 
 func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChannel chan Source.Message, addOrderChannel chan Source.ButtonMessage){
@@ -381,14 +396,16 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 
 	for elevator := range allExternalQueues {
 		for ord := range allExternalQueues[elevator] {
-			if (equalOrders(allExternalQueues[elevator][ord], order)) {
+			index,_ := strconv.Atoi(elevator)
+			println("\x1b[38;1mElevator: \x1b[0m", elevator, "\x1b[37;1m\tCurrent floor: \x1b[0m", allElevatorsInfo[index].CurrentFloor, "\x1b[36;1m\nNumOIu: \x1b[0m", numOrdersInDirection[index][Source.UP], "\x1b[35;1m\tNumOId: \x1b[0m", numOrdersInDirection[index][Source.DOWN])
+			if (equalOrders(allExternalQueues[elevator][ord], order.Button)) {
 				return			
 			} 
 		}
 	}
 	calculateCost:
 	for elevator := range allElevatorsInfo{
-		println("Elevator nr. ", elevator)
+		println("\x1b[38;1mElevator: \x1b[0m", elevator, "\x1b[37;1m\tCurrent floor: \x1b[0m", allElevatorsInfo[elevator].CurrentFloor, "\x1b[36;1m\nNumOIu: \x1b[0m", numOrdersInDirection[elevator][Source.UP], "\x1b[35;1m\tNumOId: \x1b[0m", numOrdersInDirection[elevator][Source.DOWN])
 		directionOfOrder := order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor
 		if(directionOfOrder > 0){
 					directionOfOrder = Source.UP
@@ -397,22 +414,28 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 				}
 
 		if (numOrdersInDirection[elevator][Source.UP] == 0 && numOrdersInDirection[elevator][Source.DOWN] == 0) {
-			bestElevator = elevator
-			break calculateCost
-		} else if(allElevatorsInfo[elevator].Direction == directionOfOrder && allElevatorsInfo[elevator].Direction == order.Button.Button){
 			tempCost := int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor)))
+			if(tempCost < bestCost){
+				bestCost = tempCost
+				bestElevator = elevator
+			}			
+			if (allElevatorsInfo[elevator].CurrentFloor == order.Button.Floor) {
+				break calculateCost
+			}
+		} else if(allElevatorsInfo[elevator].Direction == directionOfOrder && allElevatorsInfo[elevator].Direction == order.Button.Button){
+			tempCost := int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor))) + numOrdersInDirection[elevator][Source.UP] + numOrdersInDirection[elevator][Source.DOWN]
 			if(tempCost < bestCost){
 				bestCost = tempCost
 				bestElevator = elevator
 			}
 		} else if (allElevatorsInfo[elevator].Direction != directionOfOrder && allElevatorsInfo[elevator].Direction == order.Button.Button) {
-			tempCost := numOrdersInDirection[elevator][Source.UP] + numOrdersInDirection[elevator][Source.DOWN]
+			tempCost := numOrdersInDirection[elevator][Source.UP] + numOrdersInDirection[elevator][Source.DOWN] + int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor)))
 			if(tempCost < bestCost){
 				bestCost = tempCost
 				bestElevator = elevator
 			}
 		} else if (allElevatorsInfo[elevator].Direction != directionOfOrder) || (allElevatorsInfo[elevator].Direction == directionOfOrder && allElevatorsInfo[elevator].Direction != order.Button.Button) {
-			tempCost :=  numOrdersInDirection[elevator][allElevatorsInfo[elevator].Direction] + int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor)))
+			tempCost :=  numOrdersInDirection[elevator][Source.UP] + numOrdersInDirection[elevator][Source.DOWN] + int(math.Abs(float64(order.Button.Floor - allElevatorsInfo[elevator].CurrentFloor)))
 			if(tempCost < bestCost){
 				bestCost = tempCost
 				bestElevator = elevator
@@ -421,8 +444,10 @@ func findBestElevator(myElevatorID int, order Source.Message, bestElevatorChanne
 	}
 
 	if(bestElevator != myElevatorID){	
+		println("\x1b[33;1mBestELEVATOR : TAR DEN IKKJE SJÆL   \x1b[0m", bestElevator)
 		bestElevatorChannel <- Source.Message{true, false, true, false, false, myElevatorID, bestElevator, order.ElevInfo, order.Button, nil}
 	}else if (bestElevator == myElevatorID){
+		println("\x1b[33;1mBestELEVATOR : SJÆL   \x1b[0m", bestElevator)
 		bestElevatorChannel <- Source.Message{true, false, true, false, false, myElevatorID, bestElevator, order.ElevInfo, order.Button, nil}
 		go receiveExternalQueue(myElevatorID, order.Button)
 		addOrderChannel <- order.Button
